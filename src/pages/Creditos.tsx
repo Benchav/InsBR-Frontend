@@ -29,6 +29,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { creditsApi, CreditAccount } from '@/api/credits.api';
+import { customersApi } from '@/api/customers.api';
 import { formatCurrency, formatDate, toCents } from '@/utils/formatters';
 import { useBranchStore } from '@/stores/branchStore';
 import { Search } from 'lucide-react';
@@ -39,6 +40,11 @@ export default function Creditos() {
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<CreditAccount | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newCustomerId, setNewCustomerId] = useState('');
+  const [newTotalAmount, setNewTotalAmount] = useState('');
+  const [newDueDate, setNewDueDate] = useState('');
+  const [newNotes, setNewNotes] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'TRANSFER' | 'CHECK'>('CASH');
   const [reference, setReference] = useState('');
@@ -48,6 +54,11 @@ export default function Creditos() {
   const { data: credits = [], isLoading } = useQuery({
     queryKey: ['credits-cxc', branchId],
     queryFn: () => creditsApi.getAll({ type: 'CXC', branchId }),
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers-active', branchId],
+    queryFn: () => customersApi.getAll({ isActive: true, branchId }),
   });
 
   const filteredCredits = useMemo(() => {
@@ -70,6 +81,20 @@ export default function Creditos() {
       queryClient.invalidateQueries({ queryKey: ['credits-cxc'] });
     },
     onError: () => toast.error('No se pudo registrar el abono'),
+  });
+
+  const createCreditMutation = useMutation({
+    mutationFn: creditsApi.create,
+    onSuccess: () => {
+      toast.success('Crédito creado');
+      setIsCreateOpen(false);
+      setNewCustomerId('');
+      setNewTotalAmount('');
+      setNewDueDate('');
+      setNewNotes('');
+      queryClient.invalidateQueries({ queryKey: ['credits-cxc'] });
+    },
+    onError: () => toast.error('No se pudo crear el crédito'),
   });
 
   const handleOpenPayment = (account: CreditAccount) => {
@@ -96,6 +121,29 @@ export default function Creditos() {
     });
   };
 
+  const handleCreateCredit = () => {
+    const amountValue = Number(newTotalAmount);
+    if (!newCustomerId) {
+      toast.error('Selecciona un cliente');
+      return;
+    }
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      toast.error('Monto inválido');
+      return;
+    }
+    if (!newDueDate) {
+      toast.error('Selecciona una fecha de vencimiento');
+      return;
+    }
+    createCreditMutation.mutate({
+      customerId: newCustomerId,
+      totalAmount: toCents(amountValue),
+      dueDate: newDueDate,
+      type: 'CXC',
+      notes: newNotes.trim() || undefined,
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -104,6 +152,7 @@ export default function Creditos() {
             <h1 className="text-2xl font-bold text-foreground">Créditos</h1>
             <p className="text-muted-foreground">Cuentas por cobrar (CXC)</p>
           </div>
+          <Button onClick={() => setIsCreateOpen(true)}>Nuevo Crédito</Button>
         </div>
 
         <Card className="p-4">
@@ -241,6 +290,66 @@ export default function Creditos() {
               Cancelar
             </Button>
             <Button onClick={handleSubmitPayment} disabled={registerPaymentMutation.isPending}>
+              Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Crédito</DialogTitle>
+            <DialogDescription>Registra una nueva cuenta por cobrar.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>Cliente</Label>
+              <Select value={newCustomerId} onValueChange={setNewCustomerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Monto</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newTotalAmount}
+                onChange={(event) => setNewTotalAmount(event.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Fecha de vencimiento</Label>
+              <Input
+                type="date"
+                value={newDueDate}
+                onChange={(event) => setNewDueDate(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Notas (opcional)</Label>
+              <Input
+                value={newNotes}
+                onChange={(event) => setNewNotes(event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateCredit} disabled={createCreditMutation.isPending}>
               Guardar
             </Button>
           </div>

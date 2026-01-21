@@ -25,6 +25,14 @@ export interface RegisterPaymentDto {
   notes?: string;
 }
 
+export interface CreateCreditDto {
+  customerId: string;
+  totalAmount: number;
+  dueDate: string;
+  type: 'CXC';
+  notes?: string;
+}
+
 export const creditsApi = {
   getAll: async (filters?: { type?: 'CXC' | 'CPP'; status?: string; branchId?: string }): Promise<CreditAccount[]> => {
     const params = new URLSearchParams();
@@ -38,6 +46,11 @@ export const creditsApi = {
 
   registerPayment: async (payment: RegisterPaymentDto): Promise<CreditAccount> => {
     const { data } = await apiClient.post('/api/credits/payments', payment);
+    return data;
+  },
+
+  create: async (credit: CreateCreditDto): Promise<CreditAccount> => {
+    const { data } = await apiClient.post('/api/credits', credit);
     return data;
   },
 
