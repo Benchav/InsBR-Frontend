@@ -57,11 +57,20 @@ export const authApi = {
 
   // Update user
   updateUser: async (id: string, updates: UpdateUserDto): Promise<User> => {
-    // Filter out password if empty string
-    const payload = { ...updates };
-    if (payload.password === '') {
-      delete payload.password;
+    const payload: any = {
+      name: updates.name,
+      role: updates.role,
+      isActive: updates.isActive,
+    };
+
+    // Only include password if it is a non-empty string
+    if (updates.password && updates.password.trim() !== '') {
+      payload.password = updates.password;
     }
+
+    // Note: branchId removed from payload as per strict instruction, 
+    // unless backend actually supports it. Keeping strictly to "Payload esperado".
+
     const { data } = await apiClient.put(`/api/auth/users/${id}`, payload);
     return data;
   },

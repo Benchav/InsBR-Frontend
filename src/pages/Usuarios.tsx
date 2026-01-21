@@ -80,7 +80,7 @@ export default function Usuarios() {
   const queryClient = useQueryClient();
 
   // Fetch Users
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError } = useQuery({
     queryKey: ['users'],
     queryFn: authApi.getAllUsers,
   });
@@ -331,6 +331,12 @@ export default function Usuarios() {
       {/* Users Grid */}
       {isLoading ? (
         <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : isError ? (
+        <div className="p-8 text-center bg-destructive/10 rounded-lg border border-destructive/20 mb-6">
+          <h3 className="text-lg font-semibold text-destructive mb-2">Error al cargar usuarios</h3>
+          <p className="text-muted-foreground text-sm">No se pudo conectar con el servidor de usuarios. Verifique que el backend esté activo y el endpoint <code>/api/auth/users</code> sea correcto.</p>
+          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Reintentar</Button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredUsers.map((user) => {
