@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Ventas from "./pages/Ventas";
+import VentasTodas from "./pages/VentasTodas";
 import Compras from "./pages/Compras";
 import Inventario from "./pages/Inventario";
 import Transferencias from "./pages/Transferencias";
@@ -16,6 +17,7 @@ import Usuarios from "./pages/Usuarios";
 import Clientes from "./pages/Clientes";
 import Proveedores from "./pages/Proveedores";
 import Reportes from "./pages/Reportes";
+import Caja from "./pages/Caja";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Dashboard />} />
             <Route path="/ventas" element={<Ventas />} />
+            <Route path="/ventas-todas" element={<VentasTodas />} />
             <Route path="/compras" element={<Compras />} />
             <Route path="/inventario" element={<Inventario />} />
             <Route path="/transferencias" element={<Transferencias />} />
@@ -43,6 +46,7 @@ const App = () => (
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/reportes" element={<Reportes />} />
+            <Route path="/caja" element={<Caja />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

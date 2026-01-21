@@ -10,15 +10,19 @@ import {
   FileBarChart,
   ArrowLeftRight,
   LogOut,
-  Leaf
+  Leaf,
+  Wallet,
+  Receipt
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const navigationItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Ventas', href: '/ventas', icon: ShoppingCart },
+  { name: 'Todas las Ventas', href: '/ventas-todas', icon: Receipt },
   { name: 'Compras', href: '/compras', icon: Package },
   { name: 'Inventario', href: '/inventario', icon: Boxes },
+  { name: 'Caja', href: '/caja', icon: Wallet },
   { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight },
   { name: 'Clientes', href: '/clientes', icon: Users },
   { name: 'Proveedores', href: '/proveedores', icon: Truck },

@@ -28,7 +28,7 @@ import { productsApi, Product } from '@/api/products.api';
 import { salesApi } from '@/api/sales.api';
 import { customersApi } from '@/api/customers.api';
 import { stockApi, Stock } from '@/api/stock.api';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, toCents, toCurrency } from '@/utils/formatters';
 
 interface CartItem {
   id: string;
@@ -70,6 +70,7 @@ export default function Ventas() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [amountPaid, setAmountPaid] = useState('');
 
   // Cart Logic
   const addToCart = (product: Product) => {
@@ -111,6 +112,10 @@ export default function Ventas() {
   const taxableAmount = subtotal - discountAmount;
   const tax = taxableAmount * 0.15;
   const total = taxableAmount + tax;
+  const amountPaidValue = Number(amountPaid);
+  const amountPaidCents = Number.isFinite(amountPaidValue) ? toCents(amountPaidValue) : 0;
+  const changeDue = Math.max(amountPaidCents - total, 0);
+  const isCashInsufficient = paymentMethod === 'CASH' && amountPaidCents < total;
 
   // Checkout Logic
   const handleCheckout = () => {
@@ -118,6 +123,7 @@ export default function Ventas() {
       toast.error('Selecciona una sucursal específica para realizar ventas');
       return;
     }
+    setAmountPaid(toCurrency(total).toFixed(2));
     setIsCheckoutOpen(true);
   };
 
@@ -130,6 +136,7 @@ export default function Ventas() {
       clearCart();
       setIsCheckoutOpen(false);
       setCustomerName('');
+      setAmountPaid('');
       queryClient.invalidateQueries({ queryKey: ['stocks'] }); // Update stock
       queryClient.invalidateQueries({ queryKey: ['sales'] }); // Update dashboard if needed
     },
@@ -141,6 +148,13 @@ export default function Ventas() {
 
   const handleConfirmSale = () => {
     if (currentBranchId === 'ALL') return;
+
+    if (paymentMethod === 'CASH' && amountPaidCents < total) {
+      toast.error('Monto recibido insuficiente', {
+        description: 'El efectivo ingresado debe cubrir el total a pagar.'
+      });
+      return;
+    }
 
     createSaleMutation.mutate({
       branchId: currentBranchId,
@@ -511,6 +525,31 @@ export default function Ventas() {
               </div>
             </div>
 
+            {paymentMethod === 'CASH' && (
+              <div className="space-y-2">
+                <Label>Monto recibido</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amountPaid}
+                    onChange={(event) => setAmountPaid(event.target.value)}
+                    className="pl-10"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Vuelto</span>
+                  <span className="font-semibold">{formatCurrency(changeDue)}</span>
+                </div>
+                {amountPaid.trim() !== '' && isCashInsufficient && (
+                  <p className="text-xs text-destructive">El monto ingresado no cubre el total.</p>
+                )}
+              </div>
+            )}
+
             {paymentMethod === 'CREDIT' && (
               <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
                 <p className="text-sm text-warning font-medium">
@@ -529,7 +568,7 @@ export default function Ventas() {
             <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} disabled={createSaleMutation.isPending}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmSale} disabled={createSaleMutation.isPending}>
+            <Button onClick={handleConfirmSale} disabled={createSaleMutation.isPending || isCashInsufficient}>
               {createSaleMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirmar Venta
             </Button>
