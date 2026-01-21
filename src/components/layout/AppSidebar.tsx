@@ -12,27 +12,32 @@ import {
   LogOut,
   Leaf,
   Wallet,
-  Receipt
+  Receipt,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import type { UserRole } from '@/types/api.types';
 
-const navigationItems = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Ventas', href: '/ventas', icon: ShoppingCart },
-  { name: 'Todas las Ventas', href: '/ventas-todas', icon: Receipt },
-  { name: 'Compras', href: '/compras', icon: Package },
-  { name: 'Inventario', href: '/inventario', icon: Boxes },
-  { name: 'Caja', href: '/caja', icon: Wallet },
-  { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight },
-  { name: 'Clientes', href: '/clientes', icon: Users },
-  { name: 'Proveedores', href: '/proveedores', icon: Truck },
-  { name: 'Usuarios', href: '/usuarios', icon: Users },
-  { name: 'Reportes', href: '/reportes', icon: FileBarChart },
+const navigationItems: Array<{ name: string; href: string; icon: typeof LayoutDashboard; roles: UserRole[] }> = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Ventas', href: '/ventas', icon: ShoppingCart, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
+  { name: 'Todas las Ventas', href: '/ventas-todas', icon: Receipt, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Compras', href: '/compras', icon: Package, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Inventario', href: '/inventario', icon: Boxes, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Caja', href: '/caja', icon: Wallet, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
+  { name: 'Créditos', href: '/creditos', icon: CreditCard, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
+  { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Clientes', href: '/clientes', icon: Users, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
+  { name: 'Proveedores', href: '/proveedores', icon: Truck, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Usuarios', href: '/usuarios', icon: Users, roles: ['ADMIN'] },
+  { name: 'Reportes', href: '/reportes', icon: FileBarChart, roles: ['ADMIN', 'GERENTE'] },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const role = user?.role;
+  const visibleItems = role ? navigationItems.filter((item) => item.roles.includes(role)) : navigationItems;
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
@@ -65,7 +70,7 @@ export function AppSidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navigationItems.map((item) => {
+          {visibleItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link

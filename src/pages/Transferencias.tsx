@@ -409,15 +409,18 @@ export default function Transferencias() {
                             </>
                           )}
 
-                          {transfer.status === 'IN_TRANSIT' && (
-                            // Complete implies "Receiving it" - usually done by Receiver
+                          {transfer.status === 'IN_TRANSIT' && transfer.toBranchId === currentBranchId && (
                             <Button
                               variant="ghost" size="sm" className="text-success hover:text-success/80 hover:bg-success/10"
                               onClick={() => completeTransferMutation.mutate(transfer.id)}
                               disabled={completeTransferMutation.isPending}
                             >
-                              Recibir / Completar
+                              Confirmar Recepción
                             </Button>
+                          )}
+
+                          {transfer.status === 'IN_TRANSIT' && transfer.toBranchId !== currentBranchId && (
+                            <span className="text-xs text-muted-foreground">En tránsito</span>
                           )}
 
                           {(transfer.status === 'COMPLETED' || transfer.status === 'CANCELLED') && (

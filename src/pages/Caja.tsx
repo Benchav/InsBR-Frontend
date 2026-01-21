@@ -12,14 +12,36 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cashApi } from '@/api/cash.api';
-import { formatCurrency, formatDateTime } from '@/utils/formatters';
+import { formatCurrency, formatDateTime, toCents } from '@/utils/formatters';
 import { ArrowDownLeft, ArrowUpRight, Calendar, RefreshCcw, Wallet } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function Caja() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [movementType, setMovementType] = useState<'INCOME' | 'EXPENSE'>('INCOME');
+  const [movementCategory, setMovementCategory] = useState<'EXPENSE' | 'ADJUSTMENT'>('ADJUSTMENT');
+  const [movementAmount, setMovementAmount] = useState('');
+  const [movementDescription, setMovementDescription] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: balance } = useQuery({
     queryKey: ['cash-balance'],
@@ -43,6 +65,40 @@ export default function Caja() {
       }),
   });
 
+  const createMovementMutation = useMutation({
+    mutationFn: cashApi.createMovement,
+    onSuccess: () => {
+      toast.success('Movimiento registrado');
+      setIsDialogOpen(false);
+      setMovementAmount('');
+      setMovementDescription('');
+      setMovementType('INCOME');
+      setMovementCategory('ADJUSTMENT');
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-daily-revenue'] });
+    },
+    onError: () => toast.error('No se pudo registrar el movimiento'),
+  });
+
+  const handleCreateMovement = () => {
+    const amountValue = Number(movementAmount);
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      toast.error('Monto inválido');
+      return;
+    }
+    if (!movementDescription.trim()) {
+      toast.error('La descripción es obligatoria');
+      return;
+    }
+    createMovementMutation.mutate({
+      type: movementType,
+      amount: toCents(amountValue),
+      description: movementDescription.trim(),
+      category: movementCategory,
+    });
+  };
+
   const handleClearDates = () => {
     setStartDate('');
     setEndDate('');
@@ -56,6 +112,7 @@ export default function Caja() {
             <h1 className="text-2xl font-bold text-foreground">Caja</h1>
             <p className="text-muted-foreground">Movimientos y balance de caja</p>
           </div>
+          <Button onClick={() => setIsDialogOpen(true)}>Registrar Movimiento</Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -175,6 +232,68 @@ export default function Caja() {
           </div>
         </Card>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Registrar Movimiento</DialogTitle>
+            <DialogDescription>Agrega un ingreso o egreso manual de caja.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>Tipo</Label>
+              <Select value={movementType} onValueChange={(val) => setMovementType(val as 'INCOME' | 'EXPENSE')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INCOME">Ingreso</SelectItem>
+                  <SelectItem value="EXPENSE">Egreso</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Categoría</Label>
+              <Select value={movementCategory} onValueChange={(val) => setMovementCategory(val as 'EXPENSE' | 'ADJUSTMENT')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADJUSTMENT">Ajuste</SelectItem>
+                  <SelectItem value="EXPENSE">Gasto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Monto</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={movementAmount}
+                onChange={(event) => setMovementAmount(event.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Descripción</Label>
+              <Input
+                value={movementDescription}
+                onChange={(event) => setMovementDescription(event.target.value)}
+                placeholder="Detalle del movimiento"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateMovement} disabled={createMovementMutation.isPending}>
+              Registrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

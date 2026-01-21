@@ -5,6 +5,7 @@ export interface CreditAccount {
   type: 'CXC' | 'CPP';
   branchId: string;
   customerId?: string;
+  customerName?: string;
   supplierId?: string;
   saleId?: string;
   purchaseId?: string;
@@ -36,7 +37,7 @@ export const creditsApi = {
   },
 
   registerPayment: async (payment: RegisterPaymentDto): Promise<CreditAccount> => {
-    const { data } = await apiClient.post('/api/credits/payment', payment);
+    const { data } = await apiClient.post('/api/credits/payments', payment);
     return data;
   },
 

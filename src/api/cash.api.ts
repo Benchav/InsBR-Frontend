@@ -9,6 +9,13 @@ export interface CashMovement {
   createdAt: string;
 }
 
+export interface CashMovementPayload {
+  type: 'INCOME' | 'EXPENSE';
+  amount: number;
+  description: string;
+  category: 'EXPENSE' | 'ADJUSTMENT';
+}
+
 export const cashApi = {
   getBalance: async (filters?: { branchId?: string }): Promise<{ balance: number }> => {
     const { data } = await apiClient.get('/api/cash/balance', {
@@ -30,6 +37,11 @@ export const cashApi = {
     const { data } = await apiClient.get('/api/cash/daily-revenue', {
       params: filters?.branchId ? { branchId: filters.branchId } : undefined,
     });
+    return data;
+  },
+
+  createMovement: async (payload: CashMovementPayload): Promise<CashMovement> => {
+    const { data } = await apiClient.post('/api/cash', payload);
     return data;
   },
 };
