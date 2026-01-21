@@ -46,6 +46,13 @@ export const salesApi = {
     return data;
   },
 
+  getTicket: async (saleId: string): Promise<Blob> => {
+    const { data } = await apiClient.get(`/api/reports/sales/${saleId}/ticket`, {
+      responseType: 'blob',
+    });
+    return data;
+  },
+
   create: async (sale: CreateSaleDto): Promise<Sale> => {
     const { data } = await apiClient.post('/api/sales', sale);
     return data;

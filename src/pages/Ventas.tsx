@@ -123,9 +123,7 @@ export default function Ventas() {
   // Calculations
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = subtotal * (discount / 100);
-  const taxableAmount = subtotal - discountAmount;
-  const tax = taxableAmount * 0.15;
-  const total = taxableAmount + tax;
+  const total = subtotal - discountAmount;
   const amountPaidValue = Number(amountPaid);
   const amountPaidCents = Number.isFinite(amountPaidValue) ? toCents(amountPaidValue) : 0;
   const changeDue = Math.max(amountPaidCents - total, 0);
@@ -171,13 +169,18 @@ export default function Ventas() {
       return;
     }
 
+    const discountFactor = 1 - discount / 100;
+
     createSaleMutation.mutate({
       branchId: currentBranchId,
-      items: cart.map(item => ({
-        productId: item.id,
-        quantity: item.quantity,
-        unitPrice: item.price
-      })),
+      items: cart.map(item => {
+        const discountedUnitPrice = Math.round(item.price * discountFactor);
+        return {
+          productId: item.id,
+          quantity: item.quantity,
+          unitPrice: discountedUnitPrice
+        };
+      }),
       type: paymentMethod,
       customerId: selectedCustomerId || undefined,
       customerName: selectedCustomerId ? undefined : (customerName.trim() || undefined),
@@ -451,10 +454,6 @@ export default function Ventas() {
                   <span>- {formatCurrency(discountAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">IVA (15%)</span>
-                <span>{formatCurrency(tax)}</span>
-              </div>
               <div className="flex justify-between text-xl font-bold pt-2">
                 <span>Total</span>
                 <span className="text-primary">{formatCurrency(total)}</span>
@@ -512,10 +511,6 @@ export default function Ventas() {
                   <span>- {formatCurrency(discountAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm">
-                <span>IVA (15%)</span>
-                <span>{formatCurrency(tax)}</span>
-              </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
                 <span>Total a Pagar</span>
                 <span className="text-primary">{formatCurrency(total)}</span>

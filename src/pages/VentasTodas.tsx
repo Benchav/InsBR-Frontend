@@ -11,21 +11,64 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { salesApi } from '@/api/sales.api';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import { useBranchStore, BRANCHES } from '@/stores/branchStore';
-import { Search, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Search, ShoppingCart, TrendingUp, FileText, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function VentasTodas() {
   const { currentBranchId } = useBranchStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['sales-all'],
     queryFn: salesApi.getAll,
   });
+
+  const cancelSaleMutation = useMutation({
+    mutationFn: salesApi.cancel,
+    onSuccess: (result) => {
+      toast.success(result.message || 'Venta cancelada exitosamente');
+      setCancelTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['sales-all'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+    },
+    onError: (error) => {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(message || 'No se pudo cancelar la venta');
+    }
+  });
+
+  const handleDownloadTicket = async (saleId: string) => {
+    try {
+      const blob = await salesApi.getTicket(saleId);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+    } catch {
+      toast.error('No se pudo descargar el ticket');
+    }
+  };
+
+  const handleCancelSale = (saleId: string) => {
+    cancelSaleMutation.mutate(saleId);
+  };
 
   const filteredSales = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -118,18 +161,19 @@ export default function VentasTodas() {
                   <TableHead>Estado</TableHead>
                   <TableHead>Ítems</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                       Cargando ventas...
                     </TableCell>
                   </TableRow>
                 ) : filteredSales.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                       No hay ventas registradas
                     </TableCell>
                   </TableRow>
@@ -169,6 +213,27 @@ export default function VentasTodas() {
                       <TableCell className="text-right font-semibold">
                         {formatCurrency(sale.total)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadTicket(sale.id)}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Ticket
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setCancelTarget(sale.id)}
+                            disabled={(sale.status ?? 'ACTIVE') !== 'ACTIVE' || cancelSaleMutation.isPending}
+                          >
+                            <Ban className="mr-2 h-4 w-4" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -177,6 +242,26 @@ export default function VentasTodas() {
           </div>
         </Card>
       </div>
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar venta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción cancelará la venta seleccionada si cumple con las restricciones del día.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cancelTarget && handleCancelSale(cancelTarget)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar cancelación
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
