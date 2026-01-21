@@ -32,8 +32,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Caja() {
+  const { user } = useAuth();
+  const isReadOnly = user?.role === 'CAJERO';
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -111,8 +114,13 @@ export default function Caja() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Caja</h1>
             <p className="text-muted-foreground">Movimientos y balance de caja</p>
+            {isReadOnly && (
+              <p className="mt-2 text-xs text-warning">Solo lectura</p>
+            )}
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>Registrar Movimiento</Button>
+          {!isReadOnly && (
+            <Button onClick={() => setIsDialogOpen(true)}>Registrar Movimiento</Button>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -233,7 +241,8 @@ export default function Caja() {
         </Card>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {!isReadOnly && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Registrar Movimiento</DialogTitle>
@@ -293,7 +302,8 @@ export default function Caja() {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      )}
     </DashboardLayout>
   );
 }

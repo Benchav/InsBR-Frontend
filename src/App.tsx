@@ -3,7 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import type { UserRole } from "@/types/api.types";
 
 // Pages
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +24,27 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const getDefaultRoute = (role?: UserRole) => {
+  if (role === 'CAJERO') return '/ventas';
+  if (role === 'GERENTE' || role === 'ADMIN') return '/';
+  return '/login';
+};
+
+const RoleRoute = ({ roles, children }: { roles: UserRole[]; children: JSX.Element }) => {
+  const { user, isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) return null;
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!roles.includes(user.role)) {
+    return <Navigate to={getDefaultRoute(user.role)} replace />;
+  }
+
+  return children;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -37,18 +59,102 @@ const App = () => (
         >
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/ventas" element={<Ventas />} />
-            <Route path="/ventas-todas" element={<VentasTodas />} />
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/inventario" element={<Inventario />} />
-            <Route path="/transferencias" element={<Transferencias />} />
-            <Route path="/usuarios" element={<Usuarios />} />
-            <Route path="/clientes" element={<Clientes />} />
-            <Route path="/proveedores" element={<Proveedores />} />
-            <Route path="/reportes" element={<Reportes />} />
-            <Route path="/caja" element={<Caja />} />
-            <Route path="/creditos" element={<Creditos />} />
+            <Route
+              path="/"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <Dashboard />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/ventas"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                  <Ventas />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/ventas-todas"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <VentasTodas />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/compras"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <Compras />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/inventario"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <Inventario />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/transferencias"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <Transferencias />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/usuarios"
+              element={(
+                <RoleRoute roles={['ADMIN']}>
+                  <Usuarios />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/clientes"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                  <Clientes />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/proveedores"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <Proveedores />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/reportes"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <Reportes />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/caja"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                  <Caja />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/creditos"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                  <Creditos />
+                </RoleRoute>
+              )}
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
