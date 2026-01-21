@@ -13,6 +13,7 @@ export interface Sale {
   branchId: string;
   customerId?: string;
   customerName?: string;
+  deliveryDate?: string;
   items: SaleItem[];
   subtotal: number;
   tax: number;
@@ -29,6 +30,7 @@ export interface Sale {
 export interface CreateSaleDto {
   branchId: string;
   customerId?: string;
+  deliveryDate?: string;
   customerName?: string;
   type: 'CASH' | 'CREDIT';
   paymentMethod?: 'CASH' | 'TRANSFER' | 'CHECK';

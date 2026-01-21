@@ -111,12 +111,14 @@ export default function Compras() {
       supplierId: newPurchase.supplierId!,
       items: newPurchase.items!,
       subtotal: total,
-      tax: 0, // Simplify for now
+      tax: 0,
       discount: 0,
       total: total,
       type: newPurchase.type as 'CASH' | 'CREDIT',
       paymentMethod: newPurchase.paymentMethod as any,
-      invoiceNumber: newPurchase.invoiceNumber,
+      ...(newPurchase.type === 'CREDIT' && newPurchase.invoiceNumber
+        ? { invoiceNumber: newPurchase.invoiceNumber }
+        : {}),
       notes: newPurchase.notes
     });
   };
@@ -175,14 +177,16 @@ export default function Compras() {
                       onChange={(e) => setNewPurchase({ ...newPurchase, supplierId: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>No. Factura</Label>
-                    <Input
-                      placeholder="F-00123"
-                      value={newPurchase.invoiceNumber}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, invoiceNumber: e.target.value })}
-                    />
-                  </div>
+                  {newPurchase.type === 'CREDIT' && (
+                    <div className="space-y-2">
+                      <Label>No. Factura</Label>
+                      <Input
+                        placeholder="F-00123"
+                        value={newPurchase.invoiceNumber}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, invoiceNumber: e.target.value })}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

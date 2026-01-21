@@ -7,14 +7,18 @@ export interface CreditAccount {
   customerId?: string;
   customerName?: string;
   supplierId?: string;
-  saleId?: string;
   purchaseId?: string;
+  saleId?: string;
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
   status: 'PENDIENTE' | 'PAGADO_PARCIAL' | 'PAGADO';
   dueDate: string;
+  deliveryDate?: string;
   createdAt: string;
+  updatedAt: string;
+  notes?: string;
+  invoiceNumber?: string;
 }
 
 export interface RegisterPaymentDto {
@@ -46,6 +50,14 @@ export const creditsApi = {
 
   registerPayment: async (payment: RegisterPaymentDto): Promise<CreditAccount> => {
     const { data } = await apiClient.post('/api/credits/payments', payment);
+    return data;
+  },
+
+  updateDetails: async (
+    creditAccountId: string,
+    details: { deliveryDate?: string; notes?: string }
+  ): Promise<CreditAccount> => {
+    const { data } = await apiClient.patch(`/api/credits/${creditAccountId}/details`, details);
     return data;
   },
 

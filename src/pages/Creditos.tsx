@@ -179,19 +179,21 @@ export default function Creditos() {
                   <TableHead>Saldo</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Vencimiento</TableHead>
+                  <TableHead>Entrega</TableHead>
+                  <TableHead>Notas</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       Cargando créditos...
                     </TableCell>
                   </TableRow>
                 ) : filteredCredits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       No hay cuentas por cobrar
                     </TableCell>
                   </TableRow>
@@ -224,6 +226,12 @@ export default function Creditos() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(credit.dueDate)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {credit.deliveryDate ? formatDate(credit.deliveryDate) : '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {credit.notes ? credit.notes : '—'}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="sm"

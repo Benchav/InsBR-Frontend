@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, User, Trash2, Percent, Receipt, DollarSign, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, User, Trash2, Percent, Receipt, DollarSign, CreditCard, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import {
@@ -28,7 +28,7 @@ import { productsApi, Product } from '@/api/products.api';
 import { salesApi } from '@/api/sales.api';
 import { customersApi } from '@/api/customers.api';
 import { stockApi, Stock } from '@/api/stock.api';
-import { formatCurrency, toCents, toCurrency } from '@/utils/formatters';
+import { formatCurrency, toCents } from '@/utils/formatters';
 
 interface CartItem {
   id: string;
@@ -68,10 +68,12 @@ export default function Ventas() {
 
   const [discount, setDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const paymentMethod: 'CASH' = 'CASH';
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerName, setCustomerName] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [creditNotes, setCreditNotes] = useState('');
 
   // Cart Logic
   const addToCart = (product: Product) => {
@@ -127,7 +129,7 @@ export default function Ventas() {
   const amountPaidValue = Number(amountPaid);
   const amountPaidCents = Number.isFinite(amountPaidValue) ? toCents(amountPaidValue) : 0;
   const changeDue = Math.max(amountPaidCents - total, 0);
-  const isCashInsufficient = amountPaidCents < total;
+  const isCashInsufficient = paymentMethod === 'CASH' && amountPaidCents < total;
 
   // Checkout Logic
   const handleCheckout = () => {
@@ -150,6 +152,9 @@ export default function Ventas() {
       setCustomerName('');
       setSelectedCustomerId('');
       setAmountPaid('');
+      setPaymentMethod('CASH');
+      setDeliveryDate('');
+      setCreditNotes('');
       queryClient.invalidateQueries({ queryKey: ['stocks'] }); // Update stock
       queryClient.invalidateQueries({ queryKey: ['sales'] }); // Update dashboard if needed
     },
@@ -162,10 +167,15 @@ export default function Ventas() {
   const handleConfirmSale = () => {
     if (currentBranchId === 'ALL') return;
 
-    if (amountPaidCents < total) {
+    if (paymentMethod === 'CASH' && amountPaidCents < total) {
       toast.error('Monto recibido insuficiente', {
         description: 'El efectivo ingresado debe cubrir el total a pagar.'
       });
+      return;
+    }
+
+    if (paymentMethod === 'CREDIT' && !selectedCustomerId && !customerName.trim()) {
+      toast.error('Seleccione o ingrese un cliente para crédito');
       return;
     }
 
@@ -184,7 +194,8 @@ export default function Ventas() {
       type: paymentMethod,
       customerId: selectedCustomerId || undefined,
       customerName: selectedCustomerId ? undefined : (customerName.trim() || undefined),
-      notes: undefined
+      deliveryDate: paymentMethod === 'CREDIT' && deliveryDate ? deliveryDate : undefined,
+      notes: paymentMethod === 'CREDIT' && creditNotes.trim() ? creditNotes.trim() : undefined,
     });
   };
 
@@ -495,7 +506,7 @@ export default function Ventas() {
           <DialogHeader>
             <DialogTitle>Confirmar Venta</DialogTitle>
             <DialogDescription>
-              Revisa los detalles y confirma el pago en efectivo.
+              Revisa los detalles y confirma la venta.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -517,7 +528,7 @@ export default function Ventas() {
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Método de pago</span>
-                <Badge variant="secondary">Efectivo</Badge>
+                <Badge variant="secondary">{paymentMethod === 'CASH' ? 'Efectivo' : 'Crédito'}</Badge>
               </div>
             </div>
 
@@ -555,28 +566,68 @@ export default function Ventas() {
               />
             </div>
 
+            {/* Payment Type */}
             <div className="space-y-2">
-              <Label>Monto recibido</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={amountPaid}
-                  onChange={(event) => setAmountPaid(event.target.value)}
-                  className="pl-10"
-                  placeholder="0.00"
-                />
+              <Label>Tipo de Venta</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'CASH' ? 'default' : 'outline'}
+                  className="h-12"
+                  onClick={() => setPaymentMethod('CASH')}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Contado
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentMethod === 'CREDIT' ? 'default' : 'outline'}
+                  className="h-12"
+                  onClick={() => setPaymentMethod('CREDIT')}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Crédito
+                </Button>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Vuelto</span>
-                <span className="font-semibold">{formatCurrency(changeDue)}</span>
-              </div>
-              {amountPaid.trim() !== '' && isCashInsufficient && (
-                <p className="text-xs text-destructive">El monto ingresado no cubre el total.</p>
-              )}
             </div>
+
+            {paymentMethod === 'CREDIT' && (
+              <div className="grid gap-3">
+                <div className="space-y-2">
+                  <Label>Fecha de entrega (opcional)</Label>
+                  <Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Notas del encargo (opcional)</Label>
+                  <Input value={creditNotes} onChange={(event) => setCreditNotes(event.target.value)} placeholder="Ej: Evento, pedido especial" />
+                </div>
+              </div>
+            )}
+
+            {paymentMethod === 'CASH' && (
+              <div className="space-y-2">
+                <Label>Monto recibido</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amountPaid}
+                    onChange={(event) => setAmountPaid(event.target.value)}
+                    className="pl-10"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Vuelto</span>
+                  <span className="font-semibold">{formatCurrency(changeDue)}</span>
+                </div>
+                {amountPaid.trim() !== '' && isCashInsufficient && (
+                  <p className="text-xs text-destructive">El monto ingresado no cubre el total.</p>
+                )}
+              </div>
+            )}
 
             {createSaleMutation.isError && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
