@@ -9,10 +9,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useBranchStore, BRANCHES, BranchId } from '@/stores/branchStore';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function TopBar() {
   const { currentBranchId, setCurrentBranch, getCurrentBranch } = useBranchStore();
   const currentBranch = getCurrentBranch();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-6">
@@ -30,26 +33,33 @@ export function TopBar() {
       {/* Right Side */}
       <div className="flex items-center gap-3">
         {/* Branch Selector */}
-        <Select
-          value={currentBranchId}
-          onValueChange={(value: BranchId) => setCurrentBranch(value)}
-        >
-          <SelectTrigger className="w-[200px] bg-primary/5 border-primary/20 text-foreground font-medium">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <SelectValue placeholder="Seleccionar sucursal" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {BRANCHES.map((branch) => (
-              <SelectItem key={branch.id} value={branch.id}>
-                <div className="flex items-center gap-2">
-                  <span>{branch.name}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {isAdmin ? (
+          <Select
+            value={currentBranchId}
+            onValueChange={(value: BranchId) => setCurrentBranch(value)}
+          >
+            <SelectTrigger className="w-[200px] bg-primary/5 border-primary/20 text-foreground font-medium">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <SelectValue placeholder="Seleccionar sucursal" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {BRANCHES.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{branch.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span>{currentBranch.name}</span>
+          </div>
+        )}
 
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">

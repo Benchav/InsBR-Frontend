@@ -3,10 +3,13 @@ import { apiClient } from './client';
 export interface Customer {
     id: string;
     name: string;
-    email?: string;
+    contactName?: string;
     phone?: string;
+    email?: string;
     address?: string;
-    documentId?: string; // Cédula or RUC
+    taxId?: string;
+    creditLimit?: number;
+    type: 'RETAIL' | 'WHOLESALE';
     isActive: boolean;
     createdAt?: string;
     updatedAt?: string;
@@ -14,23 +17,21 @@ export interface Customer {
 
 export interface CreateCustomerDto {
     name: string;
-    email?: string;
+    contactName?: string;
     phone?: string;
+    email?: string;
     address?: string;
-    documentId?: string;
+    taxId?: string;
+    creditLimit?: number;
+    type?: 'RETAIL' | 'WHOLESALE';
     isActive?: boolean;
 }
 
-export interface UpdateCustomerDto extends Partial<CreateCustomerDto> { }
+export interface UpdateCustomerDto extends Partial<CreateCustomerDto> {}
 
 export const customersApi = {
     getAll: async (): Promise<Customer[]> => {
         const { data } = await apiClient.get('/api/customers');
-        return data;
-    },
-
-    getById: async (id: string): Promise<Customer> => {
-        const { data } = await apiClient.get(`/api/customers/${id}`);
         return data;
     },
 

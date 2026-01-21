@@ -38,76 +38,113 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-            <Leaf className="h-10 w-10 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Insumos Barrera</h1>
-          <p className="text-muted-foreground">Sistema ERP</p>
-        </div>
-
-        {/* Login Card */}
-        <div className="kpi-card">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Iniciar Sesión</h2>
-            <p className="text-sm text-muted-foreground">Ingresa tus credenciales para acceder</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Usuario</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Ingresa tu usuario"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="h-11"
-              />
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid w-full items-center gap-10 lg:grid-cols-2">
+          {/* Brand Panel */}
+          <div className="hidden lg:flex flex-col gap-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
+                <Leaf className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Insumos Barrera</h1>
+                <p className="text-muted-foreground">Sistema ERP</p>
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Ingresa tu contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-11"
-              />
+            <div className="rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-background to-secondary/40 p-8">
+              <h2 className="text-2xl font-semibold text-foreground">Operaciones centralizadas</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Controla inventario, ventas, compras y proveedores desde un solo panel seguro.
+              </p>
+              <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  Acceso por roles y sucursales
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  Reportes listos para auditoría
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  Integración con API en tiempo real
+                </div>
+              </div>
             </div>
+          </div>
 
-            <Button type="submit" className="w-full h-11" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : (
-                'Iniciar Sesión'
-              )}
-            </Button>
-          </form>
+          {/* Login Card */}
+          <div className="w-full">
+            <div className="mx-auto w-full max-w-md lg:max-w-lg">
+              <div className="flex flex-col items-center mb-8 lg:hidden">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
+                  <Leaf className="h-10 w-10 text-primary-foreground" />
+                </div>
+                <h1 className="text-2xl font-bold text-foreground">Insumos Barrera</h1>
+                <p className="text-muted-foreground">Sistema ERP</p>
+              </div>
 
-          {/* Demo Hint */}
-          <div className="mt-6 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center mb-2">
-              ¿Primera vez? Usa las credenciales de demo:
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={handleDemoLogin}
-            >
-              Cargar credenciales demo
-            </Button>
+              <div className="kpi-card">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-foreground">Iniciar Sesión</h2>
+                  <p className="text-sm text-muted-foreground">Ingresa tus credenciales para acceder</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Usuario</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="Ingresa tu usuario"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Ingresa tu contraseña"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full h-11" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Iniciando sesión...
+                      </>
+                    ) : (
+                      'Iniciar Sesión'
+                    )}
+                  </Button>
+                </form>
+
+                <div className="mt-6 pt-4 border-t border-border">
+                  <p className="text-xs text-muted-foreground text-center mb-2">
+                    ¿Primera vez? Usa las credenciales de demo:
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleDemoLogin}
+                  >
+                    Cargar credenciales demo
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

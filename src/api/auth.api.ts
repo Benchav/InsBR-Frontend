@@ -5,6 +5,8 @@ export interface LoginRequest {
   password: string;
 }
 
+export type UserRole = 'ADMIN' | 'GERENTE' | 'CAJERO';
+
 export interface User {
   id: string; // Changed from userId to id to match common patterns, check backend usually uses id or _id. Based on mock usage it was id and userId. Let's standardize on id for frontend if backend returns userId we map it? Or assume backend returns id or userId. Let's look at getProfile response.
   // The mock in Usuarios.tsx uses 'id'. The type User in auth.api.ts uses 'userId'.
@@ -12,7 +14,7 @@ export interface User {
   userId: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'SELLER';
+  role: UserRole;
   branchId: string;
   email?: string;
   phone?: string;
@@ -28,7 +30,7 @@ export interface LoginResponse {
 
 export interface UpdateUserDto {
   name?: string;
-  role?: 'ADMIN' | 'SELLER';
+  role?: UserRole;
   isActive?: boolean;
   password?: string;
   branchId?: string; // Often required if changing logic
@@ -51,7 +53,7 @@ export const authApi = {
 
   // Get all users (Admin only)
   getAllUsers: async (): Promise<User[]> => {
-    const { data } = await apiClient.get('/api/users');
+    const { data } = await apiClient.get('/api/auth/users');
     return data;
   },
 
@@ -61,6 +63,7 @@ export const authApi = {
       name: updates.name,
       role: updates.role,
       isActive: updates.isActive,
+      branchId: updates.branchId,
     };
 
     // Only include password if it is a non-empty string
@@ -68,10 +71,7 @@ export const authApi = {
       payload.password = updates.password;
     }
 
-    // Note: branchId removed from payload as per strict instruction, 
-    // unless backend actually supports it. Keeping strictly to "Payload esperado".
-
-    const { data } = await apiClient.put(`/api/users/${id}`, payload);
+    const { data } = await apiClient.put(`/api/auth/users/${id}`, payload);
     return data;
   },
 

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
 import { authApi, LoginRequest, User } from '@/api/auth.api';
 import { saveAuthToken, saveUserData, getUserData, clearStorage } from '@/utils/storage';
+import { useBranchStore, BranchId } from '@/stores/branchStore';
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +16,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { setCurrentBranch } = useBranchStore();
+
+  const mapUserBranchId = (branchId?: string): BranchId => {
+    if (!branchId) return 'diriamba';
+    const normalized = branchId.toLowerCase();
+    if (normalized.includes('diri') || normalized.includes('dir')) return 'diriamba';
+    if (normalized.includes('jino') || normalized.includes('jin')) return 'jinotepe';
+    return 'diriamba';
+  };
 
   useEffect(() => {
     const userData = getUserData();
@@ -23,6 +33,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role !== 'ADMIN') {
+      setCurrentBranch(mapUserBranchId(user.branchId));
+    }
+  }, [user, setCurrentBranch]);
 
   const login = async (credentials: LoginRequest) => {
     const response = await authApi.login(credentials);

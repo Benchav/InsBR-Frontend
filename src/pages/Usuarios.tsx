@@ -45,15 +45,17 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authApi, User } from '@/api/auth.api';
+import { authApi, User, UserRole } from '@/api/auth.api';
 import { toast } from 'sonner';
 
 const getRoleConfig = (role: string) => {
   switch (role) {
     case 'ADMIN':
       return { label: 'Administrador', icon: Shield, class: 'bg-primary/10 text-primary' };
-    case 'SELLER':
-      return { label: 'Vendedor', icon: ShoppingCart, class: 'bg-success/10 text-success' };
+    case 'GERENTE':
+      return { label: 'Gerente', icon: UserCog, class: 'bg-success/10 text-success' };
+    case 'CAJERO':
+      return { label: 'Cajero', icon: ShoppingCart, class: 'bg-warning/10 text-warning' };
     default:
       return { label: role, icon: UserCog, class: 'bg-muted text-muted-foreground' };
   }
@@ -74,7 +76,7 @@ export default function Usuarios() {
     username: '',
     email: '',
     phone: '',
-    role: 'SELLER' as 'ADMIN' | 'SELLER',
+    role: 'CAJERO' as UserRole,
     branchId: 'diriamba',
     password: '',
     isActive: true
@@ -82,7 +84,7 @@ export default function Usuarios() {
 
   const [editForm, setEditForm] = useState({
     name: '',
-    role: 'SELLER' as 'ADMIN' | 'SELLER',
+    role: 'CAJERO' as UserRole,
     isActive: true,
     password: '',
     branchId: 'diriamba'
@@ -107,7 +109,7 @@ export default function Usuarios() {
         username: '',
         email: '',
         phone: '',
-        role: 'SELLER',
+        role: 'CAJERO',
         branchId: 'diriamba',
         password: '',
         isActive: true
@@ -168,8 +170,8 @@ export default function Usuarios() {
   });
 
   const adminCount = users.filter(u => u.role === 'ADMIN').length;
-  const sellerCount = users.filter(u => u.role === 'SELLER').length;
-  const activeCount = users.filter(u => u.isActive).length;
+  const managerCount = users.filter(u => u.role === 'GERENTE').length;
+  const cashierCount = users.filter(u => u.role === 'CAJERO').length;
 
   return (
     <DashboardLayout>
@@ -217,11 +219,12 @@ export default function Usuarios() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Rol</Label>
-                  <Select value={createForm.role} onValueChange={(val: 'ADMIN' | 'SELLER') => setCreateForm({ ...createForm, role: val })}>
+                  <Select value={createForm.role} onValueChange={(val: UserRole) => setCreateForm({ ...createForm, role: val })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ADMIN">Administrador</SelectItem>
-                      <SelectItem value="SELLER">Vendedor</SelectItem>
+                      <SelectItem value="GERENTE">Gerente</SelectItem>
+                      <SelectItem value="CAJERO">Cajero</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -271,14 +274,15 @@ export default function Usuarios() {
                 <Label>Rol</Label>
                 <Select
                   value={editForm.role}
-                  onValueChange={(val: 'ADMIN' | 'SELLER') => setEditForm({ ...editForm, role: val })}
+                  onValueChange={(val: UserRole) => setEditForm({ ...editForm, role: val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar rol" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ADMIN">Administrador</SelectItem>
-                    <SelectItem value="SELLER">Vendedor</SelectItem>
+                    <SelectItem value="GERENTE">Gerente</SelectItem>
+                    <SelectItem value="CAJERO">Cajero</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -360,22 +364,22 @@ export default function Usuarios() {
         <div className="kpi-card">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <ShoppingCart className="h-5 w-5 text-success" />
+              <UserCog className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{sellerCount}</p>
-              <p className="text-sm text-muted-foreground">Vendedores</p>
+              <p className="text-2xl font-bold">{managerCount}</p>
+              <p className="text-sm text-muted-foreground">Gerentes</p>
             </div>
           </div>
         </div>
         <div className="kpi-card">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <UserCog className="h-5 w-5 text-success" />
+            <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
+              <ShoppingCart className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{activeCount}</p>
-              <p className="text-sm text-muted-foreground">Activos</p>
+              <p className="text-2xl font-bold">{cashierCount}</p>
+              <p className="text-sm text-muted-foreground">Cajeros</p>
             </div>
           </div>
         </div>
@@ -400,7 +404,8 @@ export default function Usuarios() {
           <SelectContent>
             <SelectItem value="all">Todos los Roles</SelectItem>
             <SelectItem value="ADMIN">Administrador</SelectItem>
-            <SelectItem value="SELLER">Vendedor</SelectItem>
+            <SelectItem value="GERENTE">Gerente</SelectItem>
+            <SelectItem value="CAJERO">Cajero</SelectItem>
           </SelectContent>
         </Select>
       </div>

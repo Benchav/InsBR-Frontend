@@ -6,6 +6,7 @@ import {
   Package,
   Boxes,
   Users,
+  Truck,
   FileBarChart,
   ArrowLeftRight,
   LogOut,
@@ -19,6 +20,8 @@ const navigationItems = [
   { name: 'Compras', href: '/compras', icon: Package },
   { name: 'Inventario', href: '/inventario', icon: Boxes },
   { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight },
+  { name: 'Clientes', href: '/clientes', icon: Users },
+  { name: 'Proveedores', href: '/proveedores', icon: Truck },
   { name: 'Usuarios', href: '/usuarios', icon: Users },
   { name: 'Reportes', href: '/reportes', icon: FileBarChart },
 ];

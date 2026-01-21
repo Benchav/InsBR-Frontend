@@ -1,5 +1,5 @@
 // API Types
-export type { User, LoginRequest, LoginResponse } from '@/api/auth.api';
+export type { User, UserRole, LoginRequest, LoginResponse } from '@/api/auth.api';
 export type { Product, CreateProductDto } from '@/api/products.api';
 export type { Stock, AdjustStockDto, StockSummary } from '@/api/stock.api';
 export type { Sale, SaleItem, CreateSaleDto } from '@/api/sales.api';

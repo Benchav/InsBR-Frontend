@@ -4,9 +4,12 @@ export interface Supplier {
     id: string;
     name: string;
     contactName?: string;
-    email?: string;
     phone?: string;
+    email?: string;
     address?: string;
+    taxId?: string;
+    creditDays?: number;
+    creditLimit?: number;
     isActive: boolean;
     createdAt?: string;
     updatedAt?: string;
@@ -15,22 +18,20 @@ export interface Supplier {
 export interface CreateSupplierDto {
     name: string;
     contactName?: string;
-    email?: string;
     phone?: string;
+    email?: string;
     address?: string;
+    taxId?: string;
+    creditDays?: number;
+    creditLimit?: number;
     isActive?: boolean;
 }
 
-export interface UpdateSupplierDto extends Partial<CreateSupplierDto> { }
+export interface UpdateSupplierDto extends Partial<CreateSupplierDto> {}
 
 export const suppliersApi = {
     getAll: async (): Promise<Supplier[]> => {
         const { data } = await apiClient.get('/api/suppliers');
-        return data;
-    },
-
-    getById: async (id: string): Promise<Supplier> => {
-        const { data } = await apiClient.get(`/api/suppliers/${id}`);
         return data;
     },
 
