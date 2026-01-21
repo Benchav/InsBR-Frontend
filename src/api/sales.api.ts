@@ -26,6 +26,7 @@ export interface Sale {
 }
 
 export interface CreateSaleDto {
+  branchId: string;
   customerId?: string;
   type: 'CASH' | 'CREDIT';
   paymentMethod?: 'CASH' | 'TRANSFER' | 'CHECK';

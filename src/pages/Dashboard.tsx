@@ -8,19 +8,43 @@ import {
   QuickActions,
 } from '@/components/dashboard';
 import { useBranchStore } from '@/stores/branchStore';
-import { DollarSign, TrendingUp, RefreshCw, Clock } from 'lucide-react';
-
-// Mock KPI data based on branch
-const kpiData = {
-  all: { revenue: 'C$ 124,500', profit: 'C$ 42,100', turnover: '12.5%', pending: 8 },
-  diriamba: { revenue: 'C$ 68,200', profit: 'C$ 24,300', turnover: '14.2%', pending: 3 },
-  jinotepe: { revenue: 'C$ 56,300', profit: 'C$ 17,800', turnover: '10.8%', pending: 5 },
-};
+import { DollarSign, TrendingUp, RefreshCw, ShoppingBag, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { salesApi } from '@/api/sales.api';
+import { useMemo } from 'react';
 
 export default function Dashboard() {
-  const { currentBranchId, getCurrentBranch } = useBranchStore();
-  const currentBranch = getCurrentBranch();
-  const data = kpiData[currentBranchId];
+  const { currentBranchId } = useBranchStore();
+
+  const { data: sales = [], isLoading } = useQuery({
+    queryKey: ['sales', currentBranchId], // Recalculate when branch changes (though usually we filter client side if API returns all, but good practice)
+    queryFn: salesApi.getAll,
+  });
+
+  const stats = useMemo(() => {
+    // Get today's date in local time or ISO date part if generic
+    // Ensure we match the server's date format or just check YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+
+    const filteredSales = sales.filter((sale) => {
+      // Branch filter
+      const matchesBranch = currentBranchId === 'all' || sale.branchId === currentBranchId;
+      // Date filter (checking if starts with today's date string YYYY-MM-DD)
+      // Assuming sale.createdAt is ISO string
+      const isToday = sale.createdAt?.startsWith(today);
+      const isActive = sale.status !== 'CANCELLED';
+
+      return matchesBranch && isToday && isActive;
+    });
+
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+    const transactionCount = filteredSales.length;
+
+    return {
+      revenue: totalRevenue,
+      transactions: transactionCount,
+    };
+  }, [sales, currentBranchId]);
 
   return (
     <DashboardLayout>
@@ -38,36 +62,42 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KPICard
-          title="Ingresos Totales"
-          value={data.revenue}
-          trend={12}
-          trendLabel="vs mes anterior"
-          icon={<DollarSign className="h-6 w-6 text-primary" />}
+          title="Ventas del Día"
+          value={isLoading ? "..." : `C$ ${stats.revenue.toLocaleString()}`}
+          trend={0}
+          trendLabel="Total hoy"
+          icon={isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <DollarSign className="h-6 w-6 text-primary" />}
           iconBgClass="bg-primary/10"
         />
+        {/* Keeping Mock/Placeholder for Profit/Net Income as we can't calculate it yet */}
         <KPICard
-          title="Ganancia Neta"
-          value={data.profit}
-          trend={5}
-          trendLabel="vs mes anterior"
+          title="Ganancia Estimada"
+          value="C$ 0.00"
+          trend={0}
+          trendLabel="No disponible"
           icon={<TrendingUp className="h-6 w-6 text-success" />}
           iconBgClass="bg-success/10"
         />
         <KPICard
+          title="Transacciones"
+          value={isLoading ? "..." : stats.transactions.toString()}
+          trend={0}
+          trendLabel="Ventas hoy"
+          icon={<ShoppingBag className="h-6 w-6 text-blue-500" />}
+          iconBgClass="bg-blue-500/10"
+        />
+        {/* Keeping one static or maybe "Pending Orders" if we had them. 
+             Since we don't have pending orders in Sale type clearly (only Active/Cancelled), 
+             we'll reuse the Rotación logic or just leave a placeholder or remove pending if not accurate.
+             I will keep "Rotación de Stock" as placeholder to not break grid design.
+         */}
+        <KPICard
           title="Rotación de Stock"
-          value={data.turnover}
-          trend={-2}
-          trendLabel="Requiere atención"
+          value="--%"
+          trend={0}
+          trendLabel="Calculando..."
           icon={<RefreshCw className="h-6 w-6 text-warning" />}
           iconBgClass="bg-warning/10"
-        />
-        <KPICard
-          title="Órdenes Pendientes"
-          value={data.pending.toString()}
-          trend={0}
-          trendLabel="Igual que ayer"
-          icon={<Clock className="h-6 w-6 text-muted-foreground" />}
-          iconBgClass="bg-muted"
         />
       </div>
 

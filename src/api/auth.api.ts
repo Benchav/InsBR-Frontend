@@ -6,16 +6,34 @@ export interface LoginRequest {
 }
 
 export interface User {
+  id: string; // Changed from userId to id to match common patterns, check backend usually uses id or _id. Based on mock usage it was id and userId. Let's standardize on id for frontend if backend returns userId we map it? Or assume backend returns id or userId. Let's look at getProfile response.
+  // The mock in Usuarios.tsx uses 'id'. The type User in auth.api.ts uses 'userId'.
+  // I will support both or standardize. Let's stick to the interface definition but maybe expand it.
   userId: string;
   username: string;
   name: string;
   role: 'ADMIN' | 'SELLER';
   branchId: string;
+  email?: string;
+  phone?: string;
+  isActive?: boolean;
+  lastLogin?: string;
+  createdAt?: string;
 }
 
 export interface LoginResponse {
   token: string;
   user: User;
+}
+
+export interface UpdateUserDto {
+  name?: string;
+  role?: 'ADMIN' | 'SELLER';
+  isActive?: boolean;
+  password?: string;
+  branchId?: string; // Often required if changing logic
+  email?: string;
+  phone?: string;
 }
 
 export const authApi = {
@@ -30,4 +48,27 @@ export const authApi = {
     const { data } = await apiClient.get('/api/auth/me');
     return data;
   },
+
+  // Get all users (Admin only)
+  getAllUsers: async (): Promise<User[]> => {
+    const { data } = await apiClient.get('/api/auth/users');
+    return data;
+  },
+
+  // Update user
+  updateUser: async (id: string, updates: UpdateUserDto): Promise<User> => {
+    // Filter out password if empty string
+    const payload = { ...updates };
+    if (payload.password === '') {
+      delete payload.password;
+    }
+    const { data } = await apiClient.put(`/api/auth/users/${id}`, payload);
+    return data;
+  },
+
+  // Create user (needed for "Nuevo Usuario")
+  createUser: async (user: any): Promise<User> => {
+    const { data } = await apiClient.post('/api/auth/register', user);
+    return data;
+  }
 };

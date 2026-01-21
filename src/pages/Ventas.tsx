@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Minus, ShoppingCart, User, CreditCard, Trash2, Percent, Receipt, DollarSign } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingCart, User, CreditCard, Trash2, Percent, Receipt, DollarSign, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import {
@@ -14,15 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { productsApi, Product } from '@/api/products.api';
+import { salesApi } from '@/api/sales.api';
+import { stockApi, Stock } from '@/api/stock.api';
 
 interface CartItem {
   id: string;
@@ -32,23 +29,36 @@ interface CartItem {
   sku: string;
 }
 
-const mockProducts = [
-  { id: '1', name: 'Urea Granulada 46%', sku: 'FER-001-50KG', price: 850, stockDiriamba: 1250, stockJinotepe: 45, category: 'Fertilizantes' },
-  { id: '2', name: 'Semilla Maíz Híbrido DK-4050', sku: 'SEM-MAZ-DKA', price: 3200, stockDiriamba: 300, stockJinotepe: 0, category: 'Semillas' },
-  { id: '3', name: 'Fungicida Preventivo', sku: 'FUN-PREV-1L', price: 450, stockDiriamba: 5, stockJinotepe: 50, category: 'Fungicidas' },
-  { id: '4', name: 'Herbicida Glifosato', sku: 'HER-GLI-5L', price: 1200, stockDiriamba: 180, stockJinotepe: 95, category: 'Herbicidas' },
-];
-
-const categories = ['Todos', 'Fertilizantes', 'Semillas', 'Herbicidas', 'Fungicidas'];
+const categories = ['Todos', 'Fertilizantes', 'Semillas', 'Herbicidas', 'Fungicidas', 'Veterinaria', 'Otros'];
 
 export default function Ventas() {
   const { currentBranchId, getCurrentBranch } = useBranchStore();
   const currentBranch = getCurrentBranch();
+  const queryClient = useQueryClient();
+
+  // Queries
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: productsApi.getAll,
+  });
+
+  const { data: stocks = [], isLoading: isLoadingStocks } = useQuery({
+    queryKey: ['stocks'],
+    queryFn: stockApi.getMyBranchStock,
+  });
+
+  // State
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
 
-  const addToCart = (product: typeof mockProducts[0]) => {
+  const [discount, setDiscount] = useState(0);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
+  const [customerName, setCustomerName] = useState('');
+
+  // Cart Logic
+  const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -56,7 +66,13 @@ export default function Ventas() {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, sku: product.sku }];
+      return [...prev, {
+        id: product.id,
+        name: product.name,
+        price: product.retailPrice,
+        quantity: 1,
+        sku: product.sku
+      }];
     });
   };
 
@@ -70,22 +86,19 @@ export default function Ventas() {
     );
   };
 
-  const [discount, setDiscount] = useState(0);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
-  const [customerName, setCustomerName] = useState('');
+  const clearCart = () => {
+    setCart([]);
+    setDiscount(0);
+  };
 
+  // Calculations
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = subtotal * (discount / 100);
   const taxableAmount = subtotal - discountAmount;
   const tax = taxableAmount * 0.15;
   const total = taxableAmount + tax;
 
-  const clearCart = () => {
-    setCart([]);
-    setDiscount(0);
-  };
-
+  // Checkout Logic
   const handleCheckout = () => {
     if (currentBranchId === 'all') {
       toast.error('Selecciona una sucursal específica para realizar ventas');
@@ -94,26 +107,78 @@ export default function Ventas() {
     setIsCheckoutOpen(true);
   };
 
-  const handleConfirmSale = () => {
-    toast.success('Venta registrada exitosamente', {
-      description: `Total: C$ ${total.toLocaleString()}`
-    });
-    clearCart();
-    setIsCheckoutOpen(false);
-    setCustomerName('');
-  };
-
-  const filteredProducts = mockProducts.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'Todos' || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  const createSaleMutation = useMutation({
+    mutationFn: salesApi.create,
+    onSuccess: () => {
+      toast.success('Venta registrada exitosamente', {
+        description: `Total: C$ ${total.toLocaleString()}`
+      });
+      clearCart();
+      setIsCheckoutOpen(false);
+      setCustomerName('');
+      queryClient.invalidateQueries({ queryKey: ['stocks'] }); // Update stock
+      queryClient.invalidateQueries({ queryKey: ['sales'] }); // Update dashboard if needed
+    },
+    onError: (error) => {
+      console.error('Sale error:', error);
+      toast.error('Error al procesar la venta');
+    }
   });
 
-  const getStockForBranch = (product: typeof mockProducts[0]) => {
-    if (currentBranchId === 'diriamba') return product.stockDiriamba;
-    if (currentBranchId === 'jinotepe') return product.stockJinotepe;
-    return product.stockDiriamba + product.stockJinotepe;
+  const handleConfirmSale = () => {
+    if (currentBranchId === 'all') return;
+
+    createSaleMutation.mutate({
+      branchId: currentBranchId,
+      items: cart.map(item => ({
+        productId: item.id,
+        quantity: item.quantity,
+        unitPrice: item.price
+      })),
+      type: paymentMethod,
+      customerId: customerName ? undefined : undefined, // In real app, we'd resolve ID or pass name as note? API expects ID. 
+      // Assuming customerName is just for display or needs a customer ID. 
+      // If the API requires a registered customer for 'CREDIT', we might need to handle that.
+      // For now, leaving customerId undefined unless we implement customer search.
+      // Maybe passing name in notes?
+      notes: customerName ? `Cliente: ${customerName}` : undefined
+    });
   };
+
+  // Combining Data
+  const getProductStock = (productId: string, branchId: string) => {
+    const productStocks = stocks.filter(s => s.productId === productId);
+    if (branchId === 'all') {
+      // Sum all stocks if necessary, or just return 0 to force selection
+      return productStocks.reduce((acc, curr) => acc + curr.quantity, 0);
+    }
+    const stockEntry = productStocks.find(s => s.branchId === branchId);
+    return stockEntry ? stockEntry.quantity : 0;
+  };
+
+  const getSpecificBranchStock = (productId: string, specificBranchId: string) => {
+    const stockEntry = stocks.find(s => s.productId === productId && s.branchId === specificBranchId);
+    return stockEntry ? stockEntry.quantity : 0;
+  };
+
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'Todos' || p.category === selectedCategory;
+
+    // Branch Filter logic
+    let hasStock = true;
+    if (currentBranchId !== 'all') {
+      const stock = getProductStock(p.id, currentBranchId);
+      hasStock = stock > 0;
+    }
+
+    return matchesSearch && matchesCategory && hasStock;
+  });
+
+  const isLoading = isLoadingProducts || isLoadingStocks;
+
+  // Assuming 'diriamba' and 'jinotepe' are the fixed Ids for now based on store, 
+  // but ideally should be dynamic. The store hardcodes them.
 
   return (
     <DashboardLayout>
@@ -160,89 +225,102 @@ export default function Ventas() {
 
           {/* Product Grid */}
           <div className="flex-1 overflow-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-background">
-                <tr className="border-b border-border">
-                  <th className="table-header text-left py-3 px-2">Producto</th>
-                  <th className="table-header text-center py-3 px-2">
-                    {currentBranchId === 'all' ? 'Stock Diriamba' : 'Stock'}
-                  </th>
-                  {currentBranchId === 'all' && (
-                    <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
-                  )}
-                  <th className="table-header text-right py-3 px-2">Precio Unit.</th>
-                  <th className="table-header text-center py-3 px-2">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((product) => {
-                  const cartItem = cart.find((item) => item.id === product.id);
-                  const stock = getStockForBranch(product);
-                  const isLowStock = stock < 10;
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="sticky top-0 bg-background z-10">
+                  <tr className="border-b border-border">
+                    <th className="table-header text-left py-3 px-2">Producto</th>
+                    <th className="table-header text-center py-3 px-2">
+                      {currentBranchId === 'all' ? 'Stock Diriamba' : 'Stock'}
+                    </th>
+                    {currentBranchId === 'all' && (
+                      <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
+                    )}
+                    <th className="table-header text-right py-3 px-2">Precio Unit.</th>
+                    <th className="table-header text-center py-3 px-2">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map((product) => {
+                    const cartItem = cart.find((item) => item.id === product.id);
+                    const stock = getProductStock(product.id, currentBranchId);
 
-                  return (
-                    <tr key={product.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-3 px-2">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                    // Specific stocks for columns
+                    const stockDiriamba = getSpecificBranchStock(product.id, 'diriamba');
+                    const stockJinotepe = getSpecificBranchStock(product.id, 'jinotepe');
+
+                    const displayStock = currentBranchId === 'all' ? stockDiriamba : stock;
+                    const isLowStock = displayStock < 10;
+
+                    return (
+                      <tr key={product.id} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                              <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">{product.name}</p>
+                              <p className="text-xs text-muted-foreground">{product.sku}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">{product.sku}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <span className={cn(
-                          'inline-flex items-center gap-1 text-sm font-medium',
-                          product.stockDiriamba < 10 ? 'text-destructive' : 'text-success'
-                        )}>
-                          {currentBranchId === 'all' ? product.stockDiriamba : stock}
-                        </span>
-                      </td>
-                      {currentBranchId === 'all' && (
+                        </td>
                         <td className="py-3 px-2 text-center">
                           <span className={cn(
                             'inline-flex items-center gap-1 text-sm font-medium',
-                            product.stockJinotepe < 10 ? 'text-destructive' : 'text-success'
+                            displayStock < 10 ? 'text-destructive' : 'text-success'
                           )}>
-                            {product.stockJinotepe}
+                            {displayStock}
                           </span>
                         </td>
-                      )}
-                      <td className="py-3 px-2 text-right font-medium">
-                        C$ {product.price.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(product.id, -1)}
-                            disabled={!cartItem}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <span className="w-8 text-center font-medium">
-                            {cartItem?.quantity || 0}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 text-primary hover:bg-primary hover:text-primary-foreground"
-                            onClick={() => addToCart(product)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {currentBranchId === 'all' && (
+                          <td className="py-3 px-2 text-center">
+                            <span className={cn(
+                              'inline-flex items-center gap-1 text-sm font-medium',
+                              stockJinotepe < 10 ? 'text-destructive' : 'text-success'
+                            )}>
+                              {stockJinotepe}
+                            </span>
+                          </td>
+                        )}
+                        <td className="py-3 px-2 text-right font-medium">
+                          C$ {product.retailPrice.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(product.id, -1)}
+                              disabled={!cartItem}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">
+                              {cartItem?.quantity || 0}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:bg-primary hover:text-primary-foreground"
+                              onClick={() => addToCart(product)}
+                              disabled={currentBranchId !== 'all' && (cartItem?.quantity || 0) >= stock}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -320,8 +398,8 @@ export default function Ventas() {
 
             {/* Actions */}
             <div className="mt-4 space-y-2">
-              <Button 
-                className="w-full h-12" 
+              <Button
+                className="w-full h-12"
                 disabled={cart.length === 0}
                 onClick={handleCheckout}
               >
@@ -333,9 +411,9 @@ export default function Ventas() {
                   <Receipt className="mr-2 h-4 w-4" />
                   Cotizar
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="text-destructive hover:text-destructive" 
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
                   disabled={cart.length === 0}
                   onClick={clearCart}
                 >
@@ -384,8 +462,8 @@ export default function Ventas() {
               <Label>Cliente (opcional)</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input 
-                  placeholder="Nombre del cliente o búsqueda..."
+                <Input
+                  placeholder="Nombre del cliente..."
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="pl-10"
@@ -425,12 +503,19 @@ export default function Ventas() {
                 </p>
               </div>
             )}
+
+            {createSaleMutation.isError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive font-medium">Hubo un error al procesar la venta. Intente de nuevo.</p>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
+            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} disabled={createSaleMutation.isPending}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmSale}>
+            <Button onClick={handleConfirmSale} disabled={createSaleMutation.isPending}>
+              {createSaleMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirmar Venta
             </Button>
           </div>
