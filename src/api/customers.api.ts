@@ -30,8 +30,12 @@ export interface CreateCustomerDto {
 export interface UpdateCustomerDto extends Partial<CreateCustomerDto> {}
 
 export const customersApi = {
-    getAll: async (): Promise<Customer[]> => {
-        const { data } = await apiClient.get('/api/customers');
+    getAll: async (filters?: { isActive?: boolean; branchId?: string }): Promise<Customer[]> => {
+        const params = new URLSearchParams();
+        if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
+        if (filters?.branchId) params.append('branchId', filters.branchId);
+        const query = params.toString();
+        const { data } = await apiClient.get(`/api/customers${query ? `?${query}` : ''}`);
         return data;
     },
 

@@ -23,12 +23,12 @@ export default function Caja() {
 
   const { data: balance } = useQuery({
     queryKey: ['cash-balance'],
-    queryFn: cashApi.getBalance,
+    queryFn: () => cashApi.getBalance(),
   });
 
   const { data: dailyRevenue } = useQuery({
     queryKey: ['cash-daily-revenue'],
-    queryFn: cashApi.getDailyRevenue,
+    queryFn: () => cashApi.getDailyRevenue(),
   });
 
   const {

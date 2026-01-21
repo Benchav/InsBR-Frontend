@@ -1,50 +1,131 @@
 import { DashboardLayout } from '@/components/layout';
-import {
-  KPICard,
-  BranchTabs,
-  RevenueChart,
-  StockHealth,
-  RecentTransactions,
-  QuickActions,
-} from '@/components/dashboard';
+import { KPICard, BranchTabs, QuickActions } from '@/components/dashboard';
 import { useBranchStore } from '@/stores/branchStore';
-import { DollarSign, TrendingUp, RefreshCw, ShoppingBag, Loader2 } from 'lucide-react';
+import { DollarSign, Package, Wallet, Users, CreditCard, AlertTriangle, ShoppingCart, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { cashApi } from '@/api/cash.api';
+import { stockApi } from '@/api/stock.api';
+import { customersApi } from '@/api/customers.api';
+import { creditsApi } from '@/api/credits.api';
 import { salesApi } from '@/api/sales.api';
+import { formatCurrency, formatCurrencyShort, formatDateTime } from '@/utils/formatters';
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
+import { BRANCHES } from '@/stores/branchStore';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
 
 export default function Dashboard() {
   const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
 
-  const { data: sales = [], isLoading } = useQuery({
-    queryKey: ['sales', currentBranchId], // Recalculate when branch changes (though usually we filter client side if API returns all, but good practice)
-    queryFn: () => salesApi.getAll(),
+  const { data: dailyRevenue, isLoading: isLoadingRevenue } = useQuery({
+    queryKey: ['cash-daily-revenue', branchId],
+    queryFn: () => cashApi.getDailyRevenue({ branchId }),
+    refetchInterval: 30000,
   });
 
-  const stats = useMemo(() => {
-    // Get today's date in local time or ISO date part if generic
-    // Ensure we match the server's date format or just check YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
+  const { data: cashBalance, isLoading: isLoadingBalance } = useQuery({
+    queryKey: ['cash-balance', branchId],
+    queryFn: () => cashApi.getBalance({ branchId }),
+    refetchInterval: 30000,
+  });
 
-    const filteredSales = sales.filter((sale) => {
-      // Branch filter
-      const matchesBranch = currentBranchId === 'ALL' || sale.branchId === currentBranchId;
-      // Date filter (checking if starts with today's date string YYYY-MM-DD)
-      // Assuming sale.createdAt is ISO string
-      const isToday = sale.createdAt?.startsWith(today);
-      const isActive = sale.status !== 'CANCELLED';
+  const { data: stockSummary, isLoading: isLoadingStockSummary } = useQuery({
+    queryKey: ['stock-summary', branchId],
+    queryFn: () => stockApi.getSummary({ branchId }),
+    refetchInterval: 30000,
+  });
 
-      return matchesBranch && isToday && isActive;
+  const { data: stockAlerts = [], isLoading: isLoadingStockAlerts } = useQuery({
+    queryKey: ['stock-alerts', branchId],
+    queryFn: () => stockApi.getLowStockAlerts({ branchId }),
+    refetchInterval: 30000,
+  });
+
+  const { data: activeCustomers = [], isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['customers-active', branchId],
+    queryFn: () => customersApi.getAll({ isActive: true, branchId }),
+    refetchInterval: 30000,
+  });
+
+  const { data: pendingCredits = [], isLoading: isLoadingCredits } = useQuery({
+    queryKey: ['credits-pending', branchId],
+    queryFn: () => creditsApi.getAll({ type: 'CXC', status: 'PENDIENTE', branchId }),
+    refetchInterval: 30000,
+  });
+
+  const { data: sales = [], isLoading: isLoadingSales } = useQuery({
+    queryKey: ['sales', branchId],
+    queryFn: () => salesApi.getAll(branchId ? { branchId } : undefined),
+    refetchInterval: 30000,
+  });
+
+  const pendingCreditsAmount = useMemo(() => {
+    return pendingCredits.reduce((sum, credit) => sum + credit.balanceAmount, 0);
+  }, [pendingCredits]);
+
+  const salesForBranch = useMemo(() => {
+    return branchId ? sales.filter((sale) => sale.branchId === branchId) : sales;
+  }, [sales, branchId]);
+
+  const recentSales = useMemo(() => {
+    return [...salesForBranch]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 6);
+  }, [salesForBranch]);
+
+  const salesByDay = useMemo(() => {
+    const toDateKey = (value: Date) => value.toISOString().split('T')[0];
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index));
+      const key = toDateKey(date);
+      return { key, label: date.toLocaleDateString('es-NI', { month: 'short', day: 'numeric' }), total: 0 };
     });
 
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-    const transactionCount = filteredSales.length;
+    const map = new Map(days.map((d) => [d.key, d]));
+    salesForBranch.forEach((sale) => {
+      if (!sale.createdAt) return;
+      const saleKey = sale.createdAt.split('T')[0];
+      const entry = map.get(saleKey);
+      if (entry) {
+        entry.total += sale.total;
+      }
+    });
 
-    return {
-      revenue: totalRevenue,
-      transactions: transactionCount,
-    };
-  }, [sales, currentBranchId]);
+    return days;
+  }, [salesForBranch]);
+
+  const topProducts = useMemo(() => {
+    const totals = new Map<string, { name: string; quantity: number; total: number }>();
+    salesForBranch.forEach((sale) => {
+      sale.items.forEach((item) => {
+        const name = item.productName || item.productId;
+        const current = totals.get(name) || { name, quantity: 0, total: 0 };
+        const itemTotal = item.subtotal ?? item.unitPrice * item.quantity;
+        current.quantity += item.quantity;
+        current.total += itemTotal;
+        totals.set(name, current);
+      });
+    });
+
+    return Array.from(totals.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6);
+  }, [salesForBranch]);
+
+  const getBranchLabel = (branchIdValue: string) => {
+    return BRANCHES.find((b) => b.id === branchIdValue)?.shortName || branchIdValue;
+  };
 
   return (
     <DashboardLayout>
@@ -60,61 +141,251 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <KPICard
           title="Ventas del Día"
-          value={isLoading ? "..." : `C$ ${stats.revenue.toLocaleString()}`}
-          trend={0}
-          trendLabel="Total hoy"
-          icon={isLoading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <DollarSign className="h-6 w-6 text-primary" />}
+          value={isLoadingRevenue ? "..." : formatCurrency(dailyRevenue?.totalRevenue ?? 0)}
+          icon={isLoadingRevenue ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <DollarSign className="h-6 w-6 text-primary" />}
           iconBgClass="bg-primary/10"
         />
-        {/* Keeping Mock/Placeholder for Profit/Net Income as we can't calculate it yet */}
         <KPICard
-          title="Ganancia Estimada"
-          value="C$ 0.00"
-          trend={0}
-          trendLabel="No disponible"
-          icon={<TrendingUp className="h-6 w-6 text-success" />}
+          title="Balance de Caja"
+          value={isLoadingBalance ? "..." : formatCurrency(cashBalance?.balance ?? 0)}
+          icon={isLoadingBalance ? <Loader2 className="h-6 w-6 animate-spin text-success" /> : <Wallet className="h-6 w-6 text-success" />}
           iconBgClass="bg-success/10"
         />
         <KPICard
-          title="Transacciones"
-          value={isLoading ? "..." : stats.transactions.toString()}
-          trend={0}
-          trendLabel="Ventas hoy"
-          icon={<ShoppingBag className="h-6 w-6 text-blue-500" />}
+          title="Inventario Total"
+          value={isLoadingStockSummary ? "..." : `${stockSummary?.totalUnits ?? 0} unidades`}
+          icon={isLoadingStockSummary ? <Loader2 className="h-6 w-6 animate-spin text-blue-500" /> : <Package className="h-6 w-6 text-blue-500" />}
           iconBgClass="bg-blue-500/10"
         />
-        {/* Keeping one static or maybe "Pending Orders" if we had them. 
-             Since we don't have pending orders in Sale type clearly (only Active/Cancelled), 
-             we'll reuse the Rotación logic or just leave a placeholder or remove pending if not accurate.
-             I will keep "Rotación de Stock" as placeholder to not break grid design.
-         */}
         <KPICard
-          title="Rotación de Stock"
-          value="--%"
-          trend={0}
-          trendLabel="Calculando..."
-          icon={<RefreshCw className="h-6 w-6 text-warning" />}
+          title="Clientes Activos"
+          value={isLoadingCustomers ? "..." : activeCustomers.length.toString()}
+          icon={isLoadingCustomers ? <Loader2 className="h-6 w-6 animate-spin text-purple-500" /> : <Users className="h-6 w-6 text-purple-500" />}
+          iconBgClass="bg-purple-500/10"
+        />
+        <KPICard
+          title="Créditos Pendientes"
+          value={isLoadingCredits ? "..." : formatCurrency(pendingCreditsAmount)}
+          icon={isLoadingCredits ? <Loader2 className="h-6 w-6 animate-spin text-warning" /> : <CreditCard className="h-6 w-6 text-warning" />}
           iconBgClass="bg-warning/10"
+        />
+        <KPICard
+          title="Alertas de Stock"
+          value={isLoadingStockAlerts ? "..." : stockAlerts.length.toString()}
+          icon={isLoadingStockAlerts ? <Loader2 className="h-6 w-6 animate-spin text-destructive" /> : <AlertTriangle className="h-6 w-6 text-destructive" />}
+          iconBgClass="bg-destructive/10"
         />
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <RevenueChart />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="kpi-card animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Ventas por Día</h3>
+          </div>
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={salesByDay} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tickFormatter={(value: number) => formatCurrencyShort(value)}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                  formatter={(value: number) => [formatCurrency(value), 'Total']}
+                />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="space-y-6">
-          <StockHealth />
+        <div className="kpi-card animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Top Productos</h3>
+          </div>
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topProducts} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tickFormatter={(value: number) => formatCurrencyShort(value)}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                  formatter={(value: number) => [formatCurrency(value), 'Total']}
+                />
+                <Bar dataKey="total" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 kpi-card animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Ventas Recientes</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="table-header text-left py-3 px-2">ID</th>
+                  <th className="table-header text-left py-3 px-2">Fecha</th>
+                  <th className="table-header text-left py-3 px-2">Sucursal</th>
+                  <th className="table-header text-left py-3 px-2">Cliente</th>
+                  <th className="table-header text-right py-3 px-2">Total</th>
+                  <th className="table-header text-center py-3 px-2">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoadingSales ? (
+                  <tr>
+                    <td className="py-6 text-center text-muted-foreground" colSpan={6}>
+                      Cargando ventas...
+                    </td>
+                  </tr>
+                ) : recentSales.length === 0 ? (
+                  <tr>
+                    <td className="py-6 text-center text-muted-foreground" colSpan={6}>
+                      No hay ventas recientes
+                    </td>
+                  </tr>
+                ) : (
+                  recentSales.map((sale) => (
+                    <tr key={sale.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-2 text-sm font-medium text-foreground">{sale.id}</td>
+                      <td className="py-3 px-2 text-sm text-muted-foreground">{formatDateTime(sale.createdAt)}</td>
+                      <td className="py-3 px-2">
+                        <span
+                          className={cn(
+                            'branch-badge',
+                            sale.branchId === 'BRANCH-DIR-001'
+                              ? 'branch-diriamba'
+                              : sale.branchId === 'BRANCH-DIR-002'
+                                ? 'branch-jinotepe'
+                                : ''
+                          )}
+                        >
+                          {getBranchLabel(sale.branchId)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-sm text-muted-foreground">
+                        {sale.customerName || sale.customerId || 'Consumidor final'}
+                      </td>
+                      <td className="py-3 px-2 text-sm text-foreground text-right font-medium">
+                        {formatCurrency(sale.total)}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span
+                          className={cn(
+                            'inline-flex px-2.5 py-1 rounded-full text-xs font-medium',
+                            (sale.status ?? 'ACTIVE') === 'ACTIVE'
+                              ? 'bg-success/10 text-success'
+                              : 'bg-destructive/10 text-destructive'
+                          )}
+                        >
+                          {(sale.status ?? 'ACTIVE') === 'ACTIVE' ? 'Activa' : 'Cancelada'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="kpi-card animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Alertas de Stock</h3>
+          </div>
+          <div className="space-y-3">
+            {isLoadingStockAlerts ? (
+              <p className="text-sm text-muted-foreground">Cargando alertas...</p>
+            ) : stockAlerts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin alertas de stock</p>
+            ) : (
+              stockAlerts.slice(0, 6).map((alert) => (
+                <div key={alert.id} className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {alert.product?.name || 'Producto'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {alert.product?.sku || ''}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn('text-sm font-semibold', alert.quantity <= alert.minStock ? 'text-destructive' : 'text-warning')}>
+                      {alert.quantity} u
+                    </p>
+                    <p className="text-xs text-muted-foreground">mín {alert.minStock}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <RecentTransactions />
+        <div className="lg:col-span-2 kpi-card animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Resumen de Ventas</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 rounded-lg border border-border p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ventas Totales</p>
+                <p className="text-lg font-semibold text-foreground">{sales.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border border-border p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
+                <DollarSign className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Cobrado</p>
+                <p className="text-lg font-semibold text-foreground">{formatCurrency(sales.reduce((sum, sale) => sum + sale.total, 0))}</p>
+              </div>
+            </div>
+          </div>
         </div>
         <QuickActions />
       </div>

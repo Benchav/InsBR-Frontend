@@ -38,7 +38,7 @@ export default function VentasTodas() {
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['sales-all'],
-    queryFn: salesApi.getAll,
+    queryFn: () => salesApi.getAll(),
   });
 
   const cancelSaleMutation = useMutation({

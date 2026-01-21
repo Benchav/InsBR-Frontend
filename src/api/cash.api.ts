@@ -10,8 +10,10 @@ export interface CashMovement {
 }
 
 export const cashApi = {
-  getBalance: async (): Promise<{ balance: number }> => {
-    const { data } = await apiClient.get('/api/cash/balance');
+  getBalance: async (filters?: { branchId?: string }): Promise<{ balance: number }> => {
+    const { data } = await apiClient.get('/api/cash/balance', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 
@@ -24,8 +26,10 @@ export const cashApi = {
     return data;
   },
 
-  getDailyRevenue: async (): Promise<{ totalRevenue: number }> => {
-    const { data } = await apiClient.get('/api/cash/daily-revenue');
+  getDailyRevenue: async (filters?: { branchId?: string }): Promise<{ totalRevenue: number }> => {
+    const { data } = await apiClient.get('/api/cash/daily-revenue', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 };

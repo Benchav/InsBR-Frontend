@@ -25,10 +25,11 @@ export interface RegisterPaymentDto {
 }
 
 export const creditsApi = {
-  getAll: async (filters?: { type?: 'CXC' | 'CPP'; status?: string }): Promise<CreditAccount[]> => {
+  getAll: async (filters?: { type?: 'CXC' | 'CPP'; status?: string; branchId?: string }): Promise<CreditAccount[]> => {
     const params = new URLSearchParams();
     if (filters?.type) params.append('type', filters.type);
     if (filters?.status) params.append('status', filters.status);
+    if (filters?.branchId) params.append('branchId', filters.branchId);
 
     const { data } = await apiClient.get(`/api/credits?${params.toString()}`);
     return data;

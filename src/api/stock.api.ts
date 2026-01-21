@@ -33,8 +33,10 @@ export const stockApi = {
     return data;
   },
 
-  getLowStockAlerts: async (): Promise<Stock[]> => {
-    const { data } = await apiClient.get('/api/stock/alerts');
+  getLowStockAlerts: async (filters?: { branchId?: string }): Promise<Stock[]> => {
+    const { data } = await apiClient.get('/api/stock/alerts', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 
@@ -48,8 +50,10 @@ export const stockApi = {
     return data;
   },
 
-  getSummary: async (): Promise<StockSummary> => {
-    const { data } = await apiClient.get('/api/stock/summary');
+  getSummary: async (filters?: { branchId?: string }): Promise<StockSummary> => {
+    const { data } = await apiClient.get('/api/stock/summary', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 };

@@ -41,8 +41,10 @@ export interface CreateSaleDto {
 }
 
 export const salesApi = {
-  getAll: async (): Promise<Sale[]> => {
-    const { data } = await apiClient.get('/api/sales');
+  getAll: async (filters?: { branchId?: string }): Promise<Sale[]> => {
+    const { data } = await apiClient.get('/api/sales', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 
