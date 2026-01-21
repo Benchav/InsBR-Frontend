@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Insumos Barrera ERP Design System
+   Primary: Teal/Emerald
+   Background: Light gray
+   Cards: Pure white
+*/
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 170 77% 26%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 170 30% 94%;
+    --secondary-foreground: 170 77% 26%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 170 30% 94%;
+    --accent-foreground: 170 77% 26%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 170 77% 26%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 16% 47%;
+    --sidebar-primary: 170 77% 26%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 170 30% 94%;
+    --sidebar-accent-foreground: 170 77% 26%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 170 77% 26%;
+
+    /* Custom tokens */
+    --kpi-green: 142 76% 36%;
+    --kpi-orange: 25 95% 53%;
+    --kpi-blue: 201 96% 32%;
+    --kpi-purple: 262 83% 58%;
+    
+    --chart-diriamba: 170 77% 26%;
+    --chart-jinotepe: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 170 77% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 170 30% 20%;
+    --secondary-foreground: 170 77% 60%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 170 30% 20%;
+    --accent-foreground: 170 77% 60%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 170 77% 40%;
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 170 77% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 170 30% 20%;
+    --sidebar-accent-foreground: 170 77% 60%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 170 77% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .kpi-card {
+    @apply bg-card rounded-xl p-5 border border-border shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  .kpi-value {
+    @apply text-2xl font-bold text-foreground;
+  }
+  
+  .kpi-label {
+    @apply text-sm text-muted-foreground font-medium;
+  }
+  
+  .kpi-trend-up {
+    @apply text-success text-xs font-medium flex items-center gap-1;
+  }
+  
+  .kpi-trend-down {
+    @apply text-destructive text-xs font-medium flex items-center gap-1;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer;
+  }
+  
+  .sidebar-item-active {
+    @apply bg-sidebar-accent text-sidebar-primary font-medium;
+  }
+  
+  .table-header {
+    @apply bg-muted/50 text-muted-foreground font-medium text-sm;
+  }
+  
+  .stock-low {
+    @apply bg-destructive/10 text-destructive font-medium px-2 py-1 rounded-md text-sm;
+  }
+  
+  .stock-good {
+    @apply bg-success/10 text-success font-medium px-2 py-1 rounded-md text-sm;
+  }
+  
+  .branch-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .branch-diriamba {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  .branch-jinotepe {
+    @apply bg-warning/10 text-warning;
+  }
+}
