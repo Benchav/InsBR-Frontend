@@ -27,8 +27,8 @@ export interface CreateProductDto {
 }
 
 export const productsApi = {
-  getAll: async (): Promise<Product[]> => {
-    const { data } = await apiClient.get('/api/products');
+  getAll: async (params?: { isActive?: boolean }): Promise<Product[]> => {
+    const { data } = await apiClient.get('/api/products', { params });
     return data;
   },
 

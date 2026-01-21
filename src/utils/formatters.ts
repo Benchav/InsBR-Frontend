@@ -1,17 +1,20 @@
-// Convertir centavos a córdobas
-export const centsToCurrency = (cents: number): number => {
+// Convertir centavos a córdobas (backend -> frontend)
+export const toCurrency = (cents: number): number => {
   return cents / 100;
 };
 
-// Formatear como moneda (Córdobas)
+// Alias compatible
+export const centsToCurrency = toCurrency;
+
+// Formatear como moneda (Córdobas) para mostrar en UI
 export const formatCurrency = (cents: number): string => {
-  const amount = centsToCurrency(cents);
+  const amount = toCurrency(cents);
   return `C$ ${amount.toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 // Formatear moneda sin centavos (para valores grandes)
 export const formatCurrencyShort = (cents: number): string => {
-  const amount = centsToCurrency(cents);
+  const amount = toCurrency(cents);
   if (amount >= 1000000) {
     return `C$ ${(amount / 1000000).toFixed(1)}M`;
   }
@@ -21,10 +24,14 @@ export const formatCurrencyShort = (cents: number): string => {
   return `C$ ${amount.toFixed(0)}`;
 };
 
-// Convertir córdobas a centavos
-export const currencyToCents = (amount: number): number => {
+// Convertir córdobas a centavos (frontend -> backend)
+// ROBUST: Handles floats appropriately to avoid floating point errors before rounding
+export const toCents = (amount: number): number => {
   return Math.round(amount * 100);
 };
+
+// Alias compatible
+export const currencyToCents = toCents;
 
 // Formatear fecha
 export const formatDate = (dateString: string): string => {

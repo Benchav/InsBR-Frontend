@@ -14,12 +14,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi, Product } from '@/api/products.api';
 import { salesApi } from '@/api/sales.api';
+import { customersApi } from '@/api/customers.api';
 import { stockApi, Stock } from '@/api/stock.api';
+import { formatCurrency } from '@/utils/formatters';
 
 interface CartItem {
   id: string;
@@ -39,7 +48,12 @@ export default function Ventas() {
   // Queries
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products'],
-    queryFn: productsApi.getAll,
+    queryFn: () => productsApi.getAll({ isActive: true }),
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: customersApi.getAll,
   });
 
   const { data: stocks = [], isLoading: isLoadingStocks } = useQuery({
@@ -55,7 +69,7 @@ export default function Ventas() {
   const [discount, setDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
-  const [customerName, setCustomerName] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
 
   // Cart Logic
   const addToCart = (product: Product) => {
@@ -136,12 +150,8 @@ export default function Ventas() {
         unitPrice: item.price
       })),
       type: paymentMethod,
-      customerId: customerName ? undefined : undefined, // In real app, we'd resolve ID or pass name as note? API expects ID. 
-      // Assuming customerName is just for display or needs a customer ID. 
-      // If the API requires a registered customer for 'CREDIT', we might need to handle that.
-      // For now, leaving customerId undefined unless we implement customer search.
-      // Maybe passing name in notes?
-      notes: customerName ? `Cliente: ${customerName}` : undefined
+      customerId: selectedCustomerId || undefined,
+      notes: undefined
     });
   };
 
@@ -288,7 +298,7 @@ export default function Ventas() {
                           </td>
                         )}
                         <td className="py-3 px-2 text-right font-medium">
-                          C$ {product.retailPrice.toLocaleString()}
+                          {formatCurrency(product.retailPrice)}
                         </td>
                         <td className="py-3 px-2">
                           <div className="flex items-center justify-center gap-2">
@@ -344,11 +354,11 @@ export default function Ventas() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.quantity} x C$ {item.price.toLocaleString()}
+                        {item.quantity} x {formatCurrency(item.price)}
                       </p>
                     </div>
                     <p className="font-semibold text-sm ml-2">
-                      C$ {(item.quantity * item.price).toLocaleString()}
+                      {formatCurrency(item.quantity * item.price)}
                     </p>
                   </div>
                 ))
@@ -378,21 +388,21 @@ export default function Ventas() {
             <div className="border-t border-border pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>C$ {subtotal.toLocaleString()}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm text-success">
                   <span>Descuento ({discount}%)</span>
-                  <span>- C$ {discountAmount.toLocaleString()}</span>
+                  <span>- {formatCurrency(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">IVA (15%)</span>
-                <span>C$ {tax.toLocaleString()}</span>
+                <span>{formatCurrency(tax)}</span>
               </div>
               <div className="flex justify-between text-xl font-bold pt-2">
                 <span>Total</span>
-                <span className="text-primary">C$ {total.toLocaleString()}</span>
+                <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -439,21 +449,21 @@ export default function Ventas() {
             <div className="p-4 bg-muted/50 rounded-lg space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>C$ {subtotal.toLocaleString()}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm text-success">
                   <span>Descuento ({discount}%)</span>
-                  <span>- C$ {discountAmount.toLocaleString()}</span>
+                  <span>- {formatCurrency(discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span>IVA (15%)</span>
-                <span>C$ {tax.toLocaleString()}</span>
+                <span>{formatCurrency(tax)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-border">
                 <span>Total a Pagar</span>
-                <span className="text-primary">C$ {total.toLocaleString()}</span>
+                <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -462,12 +472,17 @@ export default function Ventas() {
               <Label>Cliente (opcional)</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Nombre del cliente..."
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="pl-10"
-                />
+                {/* Use a simple Select for now since Shadcn Select is available */}
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                  <SelectTrigger className="pl-10">
+                    <SelectValue placeholder="Seleccionar Cliente..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

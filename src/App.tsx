@@ -13,6 +13,8 @@ import Compras from "./pages/Compras";
 import Inventario from "./pages/Inventario";
 import Transferencias from "./pages/Transferencias";
 import Usuarios from "./pages/Usuarios";
+import Clientes from "./pages/Clientes";
+import Proveedores from "./pages/Proveedores";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/inventario" element={<Inventario />} />
             <Route path="/transferencias" element={<Transferencias />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/reportes" element={<Reportes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

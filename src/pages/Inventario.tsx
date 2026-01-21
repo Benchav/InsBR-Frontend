@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi, Product } from '@/api/products.api';
 import { stockApi } from '@/api/stock.api';
+import { toCurrency, toCents, formatCurrency } from '@/utils/formatters';
 import {
   Dialog,
   DialogContent,
@@ -175,8 +176,8 @@ export default function Inventario() {
       sku: product.sku,
       category: product.category,
       description: product.description || '',
-      costPrice: product.costPrice / 100, // Converting cents back to standard for edit
-      retailPrice: product.retailPrice / 100,
+      costPrice: toCurrency(product.costPrice),
+      retailPrice: toCurrency(product.retailPrice),
       unit: product.unit,
       isActive: product.isActive
     });
@@ -186,8 +187,8 @@ export default function Inventario() {
   const handleSaveProduct = (isEdit: boolean) => {
     const payload = {
       ...productForm,
-      costPrice: Math.round(productForm.costPrice * 100),
-      retailPrice: Math.round(productForm.retailPrice * 100)
+      costPrice: toCents(productForm.costPrice),
+      retailPrice: toCents(productForm.retailPrice)
     };
 
     if (isEdit && editingProduct) {
@@ -383,7 +384,7 @@ export default function Inventario() {
                       )}
 
                       <td className="py-4 px-4 text-center font-bold">{total}</td>
-                      <td className="py-4 px-4 text-right font-medium">C$ {(item.retailPrice / 100).toLocaleString('en-NI', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-4 px-4 text-right font-medium">{formatCurrency(item.retailPrice)}</td>
                       <td className="py-4 px-4 text-center flex justify-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
                           <Edit className="h-4 w-4" />
