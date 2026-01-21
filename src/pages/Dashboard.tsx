@@ -28,7 +28,7 @@ export default function Dashboard() {
 
     const filteredSales = sales.filter((sale) => {
       // Branch filter
-      const matchesBranch = currentBranchId === 'all' || sale.branchId === currentBranchId;
+      const matchesBranch = currentBranchId === 'ALL' || sale.branchId === currentBranchId;
       // Date filter (checking if starts with today's date string YYYY-MM-DD)
       // Assuming sale.createdAt is ISO string
       const isToday = sale.createdAt?.startsWith(today);

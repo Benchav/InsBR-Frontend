@@ -123,7 +123,7 @@ export default function Compras() {
 
   const filteredPurchases = purchases.filter((p) => {
     // Filter by branch
-    if (currentBranchId !== 'all' && p.branchId !== currentBranchId) return false;
+    if (currentBranchId !== 'ALL' && p.branchId !== currentBranchId) return false;
 
     // Search filter
     const searchLower = searchTerm.toLowerCase();
@@ -368,8 +368,8 @@ export default function Compras() {
                     <td className="py-4 px-4">
                       <span className={cn(
                         'branch-badge',
-                        purchase.branchId === 'diriamba' ? 'branch-diriamba' :
-                          purchase.branchId === 'jinotepe' ? 'branch-jinotepe' : ''
+                        purchase.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
+                          purchase.branchId === 'BRANCH-DIR-002' ? 'branch-jinotepe' : ''
                       )}>
                         {purchase.branchId}
                       </span>

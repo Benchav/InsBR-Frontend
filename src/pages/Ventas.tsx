@@ -114,7 +114,7 @@ export default function Ventas() {
 
   // Checkout Logic
   const handleCheckout = () => {
-    if (currentBranchId === 'all') {
+    if (currentBranchId === 'ALL') {
       toast.error('Selecciona una sucursal específica para realizar ventas');
       return;
     }
@@ -140,7 +140,7 @@ export default function Ventas() {
   });
 
   const handleConfirmSale = () => {
-    if (currentBranchId === 'all') return;
+    if (currentBranchId === 'ALL') return;
 
     createSaleMutation.mutate({
       branchId: currentBranchId,
@@ -158,7 +158,7 @@ export default function Ventas() {
   // Combining Data
   const getProductStock = (productId: string, branchId: string) => {
     const productStocks = stocks.filter(s => s.productId === productId);
-    if (branchId === 'all') {
+    if (branchId === 'ALL') {
       // Sum all stocks if necessary, or just return 0 to force selection
       return productStocks.reduce((acc, curr) => acc + curr.quantity, 0);
     }
@@ -177,7 +177,7 @@ export default function Ventas() {
 
     // Branch Filter logic
     let hasStock = true;
-    if (currentBranchId !== 'all') {
+    if (currentBranchId !== 'ALL') {
       const stock = getProductStock(p.id, currentBranchId);
       hasStock = stock > 0;
     }
@@ -187,7 +187,7 @@ export default function Ventas() {
 
   const isLoading = isLoadingProducts || isLoadingStocks;
 
-  // Assuming 'diriamba' and 'jinotepe' are the fixed Ids for now based on store, 
+  // Assuming fixed branch IDs based on store mapping
   // but ideally should be dynamic. The store hardcodes them.
 
   return (
@@ -245,9 +245,9 @@ export default function Ventas() {
                   <tr className="border-b border-border">
                     <th className="table-header text-left py-3 px-2">Producto</th>
                     <th className="table-header text-center py-3 px-2">
-                      {currentBranchId === 'all' ? 'Stock Diriamba' : 'Stock'}
+                      {currentBranchId === 'ALL' ? 'Stock Diriamba' : 'Stock'}
                     </th>
-                    {currentBranchId === 'all' && (
+                    {currentBranchId === 'ALL' && (
                       <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
                     )}
                     <th className="table-header text-right py-3 px-2">Precio Unit.</th>
@@ -260,10 +260,10 @@ export default function Ventas() {
                     const stock = getProductStock(product.id, currentBranchId);
 
                     // Specific stocks for columns
-                    const stockDiriamba = getSpecificBranchStock(product.id, 'diriamba');
-                    const stockJinotepe = getSpecificBranchStock(product.id, 'jinotepe');
+                    const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
+                    const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-DIR-002');
 
-                    const displayStock = currentBranchId === 'all' ? stockDiriamba : stock;
+                    const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
                     const isLowStock = displayStock < 10;
 
                     return (
@@ -287,7 +287,7 @@ export default function Ventas() {
                             {displayStock}
                           </span>
                         </td>
-                        {currentBranchId === 'all' && (
+                        {currentBranchId === 'ALL' && (
                           <td className="py-3 px-2 text-center">
                             <span className={cn(
                               'inline-flex items-center gap-1 text-sm font-medium',
@@ -319,7 +319,7 @@ export default function Ventas() {
                               size="icon"
                               className="h-8 w-8 text-primary hover:bg-primary hover:text-primary-foreground"
                               onClick={() => addToCart(product)}
-                              disabled={currentBranchId !== 'all' && (cartItem?.quantity || 0) >= stock}
+                              disabled={currentBranchId !== 'ALL' && (cartItem?.quantity || 0) >= stock}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>

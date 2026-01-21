@@ -77,7 +77,7 @@ export default function Usuarios() {
     email: '',
     phone: '',
     role: 'CAJERO' as UserRole,
-    branchId: 'diriamba',
+    branchId: 'BRANCH-DIR-001',
     password: '',
     isActive: true
   });
@@ -87,7 +87,7 @@ export default function Usuarios() {
     role: 'CAJERO' as UserRole,
     isActive: true,
     password: '',
-    branchId: 'diriamba'
+    branchId: 'BRANCH-DIR-001'
   });
 
   const queryClient = useQueryClient();
@@ -110,7 +110,7 @@ export default function Usuarios() {
         email: '',
         phone: '',
         role: 'CAJERO',
-        branchId: 'diriamba',
+        branchId: 'BRANCH-DIR-001',
         password: '',
         isActive: true
       });
@@ -144,7 +144,7 @@ export default function Usuarios() {
       role: user.role,
       isActive: user.isActive ?? true,
       password: '',
-      branchId: user.branchId || 'diriamba'
+      branchId: user.branchId || 'BRANCH-DIR-001'
     });
     setIsEditDialogOpen(true);
   };
@@ -233,8 +233,8 @@ export default function Usuarios() {
                   <Select value={createForm.branchId} onValueChange={(val) => setCreateForm({ ...createForm, branchId: val })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="diriamba">Diriamba</SelectItem>
-                      <SelectItem value="jinotepe">Jinotepe</SelectItem>
+                      <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
+                      <SelectItem value="BRANCH-DIR-002">Jinotepe</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -296,8 +296,8 @@ export default function Usuarios() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="diriamba">Diriamba</SelectItem>
-                    <SelectItem value="jinotepe">Jinotepe</SelectItem>
+                    <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
+                    <SelectItem value="BRANCH-DIR-002">Jinotepe</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -464,8 +464,8 @@ export default function Usuarios() {
                     <MapPin className="h-4 w-4" />
                     <Badge variant="outline" className={cn(
                       'branch-badge',
-                      user.branchId === 'diriamba' ? 'branch-diriamba' :
-                        user.branchId === 'jinotepe' ? 'branch-jinotepe' : ''
+                      user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
+                        user.branchId === 'BRANCH-DIR-002' ? 'branch-jinotepe' : ''
                     )}>
                       {user.branchId || 'Sin Sucursal'}
                     </Badge>

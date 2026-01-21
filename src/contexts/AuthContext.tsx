@@ -19,11 +19,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { setCurrentBranch } = useBranchStore();
 
   const mapUserBranchId = (branchId?: string): BranchId => {
-    if (!branchId) return 'diriamba';
+    if (!branchId) return 'BRANCH-DIR-001';
+    if (branchId === 'BRANCH-DIR-001') return 'BRANCH-DIR-001';
+    if (branchId === 'BRANCH-DIR-002') return 'BRANCH-DIR-002';
     const normalized = branchId.toLowerCase();
-    if (normalized.includes('diri') || normalized.includes('dir')) return 'diriamba';
-    if (normalized.includes('jino') || normalized.includes('jin')) return 'jinotepe';
-    return 'diriamba';
+    if (normalized.includes('dir')) return 'BRANCH-DIR-001';
+    if (normalized.includes('jin')) return 'BRANCH-DIR-002';
+    return 'BRANCH-DIR-001';
   };
 
   useEffect(() => {

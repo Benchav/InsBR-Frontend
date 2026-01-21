@@ -23,8 +23,8 @@ export function RevenueChart() {
   const { currentBranchId } = useBranchStore();
 
   const filteredData = revenueData.map((item) => {
-    if (currentBranchId === 'all') return item;
-    if (currentBranchId === 'diriamba') return { month: item.month, Diriamba: item.Diriamba };
+    if (currentBranchId === 'ALL') return item;
+    if (currentBranchId === 'BRANCH-DIR-001') return { month: item.month, Diriamba: item.Diriamba };
     return { month: item.month, Jinotepe: item.Jinotepe };
   });
 
@@ -35,13 +35,13 @@ export function RevenueChart() {
         <p className="text-sm text-muted-foreground">Comparando rendimiento de sucursales (Últimos 6 meses)</p>
       </div>
       <div className="flex items-center gap-4 mb-4">
-        {(currentBranchId === 'all' || currentBranchId === 'diriamba') && (
+        {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-001') && (
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-primary" />
             <span className="text-sm text-muted-foreground">Diriamba</span>
           </div>
         )}
-        {(currentBranchId === 'all' || currentBranchId === 'jinotepe') && (
+        {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-002') && (
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-warning" />
             <span className="text-sm text-muted-foreground">Jinotepe</span>
@@ -73,7 +73,7 @@ export function RevenueChart() {
               }}
               formatter={(value: number) => [`C$ ${value.toLocaleString()}`, '']}
             />
-            {(currentBranchId === 'all' || currentBranchId === 'diriamba') && (
+            {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-001') && (
               <Bar
                 dataKey="Diriamba"
                 fill="hsl(var(--primary))"
@@ -81,7 +81,7 @@ export function RevenueChart() {
                 maxBarSize={40}
               />
             )}
-            {(currentBranchId === 'all' || currentBranchId === 'jinotepe') && (
+            {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-002') && (
               <Bar
                 dataKey="Jinotepe"
                 fill="hsl(var(--warning))"

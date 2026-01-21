@@ -22,9 +22,16 @@ const transactions: Transaction[] = [
 export function RecentTransactions() {
   const { currentBranchId } = useBranchStore();
 
+  const branchNameById: Record<string, Transaction['branch']> = {
+    'BRANCH-DIR-001': 'Diriamba',
+    'BRANCH-DIR-002': 'Jinotepe',
+  };
+
   const filteredTransactions = transactions.filter((t) => {
-    if (currentBranchId === 'all') return true;
-    return t.branch.toLowerCase() === currentBranchId;
+    if (currentBranchId === 'ALL') return true;
+    const branchName = branchNameById[currentBranchId];
+    if (!branchName) return true;
+    return t.branch === branchName;
   });
 
   return (

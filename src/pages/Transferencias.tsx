@@ -52,7 +52,7 @@ export default function Transferencias() {
 
   // Create Transfer State
   const [newTransfer, setNewTransfer] = useState<Partial<CreateTransferDto>>({
-    toBranchId: currentBranchId === 'diriamba' ? 'jinotepe' : 'diriamba', // Default opposite
+    toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-DIR-002' : 'BRANCH-DIR-001', // Default opposite
     items: [],
     notes: ''
   });
@@ -76,7 +76,7 @@ export default function Transferencias() {
     onSuccess: () => {
       toast.success('Solicitud de transferencia creada');
       setIsDialogOpen(false);
-      setNewTransfer({ items: [], notes: '', toBranchId: currentBranchId === 'diriamba' ? 'jinotepe' : 'diriamba' });
+      setNewTransfer({ items: [], notes: '', toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-DIR-002' : 'BRANCH-DIR-001' });
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
     },
     onError: () => toast.error('Error al crear transferencia')
@@ -140,7 +140,7 @@ export default function Transferencias() {
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
 
     // Also filter by current branch interaction (either source or dest, unless 'all')
-    const matchesBranch = currentBranchId === 'all' ||
+    const matchesBranch = currentBranchId === 'ALL' ||
       t.fromBranchId === currentBranchId ||
       t.toBranchId === currentBranchId;
 
@@ -183,12 +183,12 @@ export default function Transferencias() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="diriamba">Diriamba</SelectItem>
-                      <SelectItem value="jinotepe">Jinotepe</SelectItem>
-                      <SelectItem value="all">Global</SelectItem>
+                      <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
+                      <SelectItem value="BRANCH-DIR-002">Jinotepe</SelectItem>
+                      <SelectItem value="ALL">Global</SelectItem>
                     </SelectContent>
                   </Select>
-                  {currentBranchId === 'all' && <p className="text-xs text-destructive">Seleccione una sucursal arriba para iniciar transferencia.</p>}
+                  {currentBranchId === 'ALL' && <p className="text-xs text-destructive">Seleccione una sucursal arriba para iniciar transferencia.</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Sucursal Destino (Hacia)</Label>
@@ -200,8 +200,8 @@ export default function Transferencias() {
                       <SelectValue placeholder="Seleccionar destino" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="diriamba" disabled={currentBranchId === 'diriamba'}>Diriamba</SelectItem>
-                      <SelectItem value="jinotepe" disabled={currentBranchId === 'jinotepe'}>Jinotepe</SelectItem>
+                      <SelectItem value="BRANCH-DIR-001" disabled={currentBranchId === 'BRANCH-DIR-001'}>Diriamba</SelectItem>
+                      <SelectItem value="BRANCH-DIR-002" disabled={currentBranchId === 'BRANCH-DIR-002'}>Jinotepe</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -355,11 +355,11 @@ export default function Transferencias() {
                       <td className="py-4 px-4 font-medium text-foreground">{transfer.id}</td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("branch-badge", transfer.fromBranchId === 'diriamba' ? 'branch-diriamba' : 'branch-jinotepe')}>
+                          <Badge variant="outline" className={cn("branch-badge", transfer.fromBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
                             {transfer.fromBranchId}
                           </Badge>
                           <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          <Badge variant="outline" className={cn("branch-badge", transfer.toBranchId === 'diriamba' ? 'branch-diriamba' : 'branch-jinotepe')}>
+                          <Badge variant="outline" className={cn("branch-badge", transfer.toBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
                             {transfer.toBranchId}
                           </Badge>
                         </div>

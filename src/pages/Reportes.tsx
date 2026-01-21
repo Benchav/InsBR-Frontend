@@ -96,7 +96,7 @@ export default function Reportes() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Centro de Reportes</h1>
           <p className="text-muted-foreground">
-            Análisis y métricas de {currentBranchId === 'all' ? 'todas las sucursales' : currentBranch.name}
+            Análisis y métricas de {currentBranchId === 'ALL' ? 'todas las sucursales' : currentBranch.name}
           </p>
         </div>
         <div className="flex gap-2">

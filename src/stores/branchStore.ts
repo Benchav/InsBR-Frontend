@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type BranchId = 'diriamba' | 'jinotepe' | 'all';
+export type BranchId = 'ALL' | 'BRANCH-DIR-001' | 'BRANCH-DIR-002';
 
 export interface Branch {
   id: BranchId;
@@ -10,9 +10,9 @@ export interface Branch {
 }
 
 export const BRANCHES: Branch[] = [
-  { id: 'all', name: 'Todas las Sucursales', shortName: 'Todas' },
-  { id: 'diriamba', name: 'Sucursal Diriamba', shortName: 'Diriamba' },
-  { id: 'jinotepe', name: 'Sucursal Jinotepe', shortName: 'Jinotepe' },
+  { id: 'ALL', name: 'Todas las Sucursales', shortName: 'Todas' },
+  { id: 'BRANCH-DIR-001', name: 'Sucursal Diriamba', shortName: 'Diriamba' },
+  { id: 'BRANCH-DIR-002', name: 'Sucursal Jinotepe', shortName: 'Jinotepe' },
 ];
 
 interface BranchState {
@@ -24,7 +24,7 @@ interface BranchState {
 export const useBranchStore = create<BranchState>()(
   persist(
     (set, get) => ({
-      currentBranchId: 'all',
+      currentBranchId: 'ALL',
       setCurrentBranch: (branchId: BranchId) => set({ currentBranchId: branchId }),
       getCurrentBranch: () => {
         const { currentBranchId } = get();
