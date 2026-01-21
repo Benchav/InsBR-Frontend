@@ -68,13 +68,24 @@ export default function Usuarios() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  // Form States for Edit
+  // Form States
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    username: '',
+    email: '',
+    phone: '',
+    role: 'SELLER' as 'ADMIN' | 'SELLER',
+    branchId: 'diriamba',
+    password: '',
+    isActive: true
+  });
+
   const [editForm, setEditForm] = useState({
     name: '',
     role: 'SELLER' as 'ADMIN' | 'SELLER',
     isActive: true,
     password: '',
-    branchId: 'diriamba' // keeping default or from user
+    branchId: 'diriamba'
   });
 
   const queryClient = useQueryClient();
@@ -86,6 +97,29 @@ export default function Usuarios() {
   });
 
   // Mutations
+  const createUserMutation = useMutation({
+    mutationFn: authApi.createUser,
+    onSuccess: () => {
+      toast.success('Usuario creado correctamente');
+      setIsCreateDialogOpen(false);
+      setCreateForm({
+        name: '',
+        username: '',
+        email: '',
+        phone: '',
+        role: 'SELLER',
+        branchId: 'diriamba',
+        password: '',
+        isActive: true
+      });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error('Error al crear usuario. Verifique los datos.');
+    }
+  });
+
   const updateUserMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => authApi.updateUser(id, data),
     onSuccess: () => {
@@ -113,10 +147,14 @@ export default function Usuarios() {
     setIsEditDialogOpen(true);
   };
 
+  const handleCreateUser = () => {
+    createUserMutation.mutate(createForm);
+  };
+
   const handleUpdateUser = () => {
     if (!editingUser) return;
     updateUserMutation.mutate({
-      id: editingUser.userId || editingUser.id, // Support both depending on API return
+      id: editingUser.userId || editingUser.id,
       data: editForm
     });
   };
@@ -157,14 +195,54 @@ export default function Usuarios() {
                 Agrega un nuevo miembro al equipo con sus permisos correspondientes.
               </DialogDescription>
             </DialogHeader>
-            {/* Create form placehodler - Implementation would be similar to Edit but with Create logic */}
             <div className="grid gap-4 py-4">
-              {/* Simplified for brevity as focus is Edit, but structure exists */}
-              <p className="text-sm text-muted-foreground">Formulario de creación pendiente de implementación completa.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre Completo</Label>
+                  <Input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} placeholder="Nombre completo" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nombre de Usuario</Label>
+                  <Input value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} placeholder="usuario.sistema" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Correo Electrónico (Opcional)</Label>
+                <Input value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} type="email" placeholder="correo@ejemplo.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>Contraseña</Label>
+                <Input value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} type="password" placeholder="••••••••" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Rol</Label>
+                  <Select value={createForm.role} onValueChange={(val: 'ADMIN' | 'SELLER') => setCreateForm({ ...createForm, role: val })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ADMIN">Administrador</SelectItem>
+                      <SelectItem value="SELLER">Vendedor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sucursal</Label>
+                  <Select value={createForm.branchId} onValueChange={(val) => setCreateForm({ ...createForm, branchId: val })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="diriamba">Diriamba</SelectItem>
+                      <SelectItem value="jinotepe">Jinotepe</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
-              {/* <Button onClick={handleCreateUser}>Crear Usuario</Button> */}
+              <Button onClick={handleCreateUser} disabled={createUserMutation.isPending || !createForm.name || !createForm.username || !createForm.password}>
+                {createUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Crear Usuario
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -205,7 +283,6 @@ export default function Usuarios() {
                 </Select>
               </div>
               <div className="space-y-2">
-                {/* Branch Selector if needed, mostly for SELLER */}
                 <Label>Sucursal</Label>
                 <Select
                   value={editForm.branchId}
@@ -269,7 +346,6 @@ export default function Usuarios() {
           </div>
         </div>
 
-        {/* ... (Keeping other stats cards similar logic but with real counts calculated above) ... */}
         <div className="kpi-card">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -305,7 +381,8 @@ export default function Usuarios() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Users Grid */}
+      {/* ... keeping filters ... */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -328,7 +405,6 @@ export default function Usuarios() {
         </Select>
       </div>
 
-      {/* Users Grid */}
       {isLoading ? (
         <div className="flex justify-center p-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : isError ? (
@@ -342,18 +418,15 @@ export default function Usuarios() {
           {filteredUsers.map((user) => {
             const roleConfig = getRoleConfig(user.role);
             const RoleIcon = roleConfig.icon;
-            // Handle different ID field names if API varies
             const userId = user.userId || user.id;
 
             return (
               <div key={userId} className="kpi-card relative">
-                {/* Status indicator */}
                 <div className={cn(
                   'absolute top-4 right-4 h-3 w-3 rounded-full',
                   user.isActive ? 'bg-success' : 'bg-muted-foreground'
                 )} />
 
-                {/* User Info */}
                 <div className="flex items-start gap-4 mb-4">
                   <Avatar className="h-14 w-14">
                     <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
@@ -373,7 +446,6 @@ export default function Usuarios() {
                   </div>
                 </div>
 
-                {/* Contact Info */}
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="h-4 w-4" />
@@ -395,23 +467,16 @@ export default function Usuarios() {
                   </div>
                 </div>
 
-                {/* Meta Info */}
                 <div className="text-xs text-muted-foreground border-t border-border pt-3 mb-3">
                   <p>Último acceso: {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Nunca'}</p>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(user)}>
                       <Edit className="h-4 w-4 mr-1" />
                       Editar
                     </Button>
-                    {/* Password reset usually separate or part of Edit logic, hiding standalone unless requested */}
-                    {/* <Button variant="outline" size="sm">
-                      <Key className="h-4 w-4 mr-1" />
-                      Contraseña
-                    </Button> */}
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

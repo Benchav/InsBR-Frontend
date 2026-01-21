@@ -3,11 +3,11 @@ import { useBranchStore } from '@/stores/branchStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, Download, Plus, AlertTriangle, Loader2, Edit, Save, ArrowLeftRight } from 'lucide-react';
+import { Search, Filter, Download, Plus, Loader2, Edit, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productsApi } from '@/api/products.api';
+import { productsApi, Product } from '@/api/products.api';
 import { stockApi } from '@/api/stock.api';
 import {
   Dialog,
@@ -20,22 +20,48 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function Inventario() {
   const { currentBranchId } = useBranchStore();
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
-  // Stock Adjustment State
+  // Dialog Control
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
-  const [selectedStockId, setSelectedStockId] = useState<string | null>(null); // We need stockId
+
+  // Data States
+  const [selectedStockId, setSelectedStockId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Forms
   const [adjustmentForm, setAdjustmentForm] = useState({
     newQuantity: 0,
     reason: '',
-    productName: '', // For display
-    currentQuantity: 0 // For display
+    productName: '',
+    currentQuantity: 0
   });
 
+  const [productForm, setProductForm] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    description: '',
+    costPrice: 0,
+    retailPrice: 0,
+    unit: 'UNIDAD',
+    isActive: true
+  });
+
+  // Queries
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products'],
     queryFn: productsApi.getAll,
@@ -46,20 +72,7 @@ export default function Inventario() {
     queryFn: stockApi.getMyBranchStock,
   });
 
-  // Helper to find stock entry
-  const getProductStockEntry = (productId: string, branchId: string) => {
-    return stocks.find(s => s.productId === productId && s.branchId === branchId);
-  };
-
-  const getStockForBranch = (productId: string, branchId: string) => {
-    const stock = getProductStockEntry(productId, branchId);
-    return stock ? stock.quantity : 0;
-  };
-
-  const getProductStocks = (productId: string) => {
-    return stocks.filter(s => s.productId === productId);
-  };
-
+  // Mutations
   const adjustStockMutation = useMutation({
     mutationFn: stockApi.adjustStock,
     onSuccess: () => {
@@ -73,41 +86,75 @@ export default function Inventario() {
     }
   });
 
+  const createProductMutation = useMutation({
+    mutationFn: productsApi.create,
+    onSuccess: () => {
+      toast.success('Producto creado correctamente');
+      setIsCreateDialogOpen(false);
+      resetProductForm();
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error('Error al crear producto');
+    }
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => productsApi.update(id, data),
+    onSuccess: () => {
+      toast.success('Producto actualizado correctamente');
+      setIsEditDialogOpen(false);
+      setEditingProduct(null);
+      resetProductForm();
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error('Error al actualizar producto');
+    }
+  });
+
+  // Helpers
+  const resetProductForm = () => {
+    setProductForm({
+      name: '',
+      sku: '',
+      category: '',
+      description: '',
+      costPrice: 0,
+      retailPrice: 0,
+      unit: 'UNIDAD',
+      isActive: true
+    });
+  };
+
+  const getProductStockEntry = (productId: string, branchId: string) => {
+    return stocks.find(s => s.productId === productId && s.branchId === branchId);
+  };
+
+  const getStockForBranch = (productId: string, branchId: string) => {
+    const stock = getProductStockEntry(productId, branchId);
+    return stock ? stock.quantity : 0;
+  };
+
+  const getProductStocks = (productId: string) => {
+    return stocks.filter(s => s.productId === productId);
+  };
+
+  // Actions
   const openAdjustDialog = (productId: string, productName: string, branchId: string) => {
-    // Logic: User must select a specific branch to adjust stock, OR we infer it if they clicked on a specific column?
-    // For now, let's assume if they click "Adjust" on the row, we might need to ask WHICH branch if showing both.
-    // But simpler UX: Interaction is "Edit" -> maybe opens product edit.
-    // "Adjust Stock" is usually critical. Let's add an explicit button or make the stock number clickable?
-    // Request asks to connect "Adjust Stock" form. I will add a button logic.
-
-    // Let's implement: Click "Edit" -> Open actions -> "Adjust Stock"
-    // Or just assume current branch context if not 'all'.
-
-    // If 'all' branches selected, we can't easily guess which stock to adjust without selection.
-    // I'll assume for this iteration we allow adjusting the stock of the CURRENT branch context 
-    // or if 'all', maybe default to Diriamba or ask.
-    // Let's protect it: explicitly require one branch view? Or show dialog with branch selector?
-
-    // Better approach: Since table shows split columns, click on the stock value to adjust it?
-    // Or use the "Edit" button to show a "Product Details & Stock" modal.
-
-    // Implementation: dedicated "Adjust" button in actions column.
-
-    // Find stock ID. Stock ID is needed for the API: stockApi.adjustStock({ stockId, ... })
-
     let targetBranch = branchId;
     if (branchId === 'all') {
-      // Fallback or compel user. Let's pick Diriamba as default or fail?
-      // Safer: Only allow adjustment if we can determine the specific stock record.
-      // Let's try to pass the branch explicitly from the specific cell click?
-      // Or just handle 'diriamba' as primary if ambiguous.
       targetBranch = 'diriamba';
     }
 
     const stockEntry = getProductStockEntry(productId, targetBranch);
 
     if (!stockEntry) {
-      toast.error(`No existe registro de stock para ${productName} en ${targetBranch}`);
+      toast.error(`No registro de stock (${targetBranch})`, {
+        description: 'Este producto no tiene inicializado el inventario en esta sucursal.'
+      });
       return;
     }
 
@@ -119,6 +166,35 @@ export default function Inventario() {
       currentQuantity: stockEntry.quantity
     });
     setIsAdjustDialogOpen(true);
+  };
+
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name,
+      sku: product.sku,
+      category: product.category,
+      description: product.description || '',
+      costPrice: product.costPrice / 100, // Converting cents back to standard for edit
+      retailPrice: product.retailPrice / 100,
+      unit: product.unit,
+      isActive: product.isActive
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveProduct = (isEdit: boolean) => {
+    const payload = {
+      ...productForm,
+      costPrice: Math.round(productForm.costPrice * 100),
+      retailPrice: Math.round(productForm.retailPrice * 100)
+    };
+
+    if (isEdit && editingProduct) {
+      updateProductMutation.mutate({ id: editingProduct.id, data: payload });
+    } else {
+      createProductMutation.mutate(payload as any);
+    }
   };
 
   const filteredInventory = products.filter((item) =>
@@ -143,12 +219,49 @@ export default function Inventario() {
             <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
-          <Button>
+
+          <Button onClick={() => { resetProductForm(); setIsCreateDialogOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Producto
           </Button>
         </div>
       </div>
+
+      {/* Create/Edit Form Logic */}
+      {/* Shared Dialog Content function could be better but inline is faster for now */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Producto</DialogTitle>
+            <DialogDescription>Ingresa los detalles del producto para el catálogo global.</DialogDescription>
+          </DialogHeader>
+          <ProductFormContent form={productForm} setForm={setProductForm} />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => handleSaveProduct(false)} disabled={createProductMutation.isPending || !productForm.name || !productForm.sku}>
+              {createProductMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar Producto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Editar Producto: {editingProduct?.name}</DialogTitle>
+            <DialogDescription>Modifica los detalles del producto.</DialogDescription>
+          </DialogHeader>
+          <ProductFormContent form={productForm} setForm={setProductForm} />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => handleSaveProduct(true)} disabled={updateProductMutation.isPending}>
+              {updateProductMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Actualizar Producto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <div className="flex gap-3 mb-6">
@@ -181,7 +294,6 @@ export default function Inventario() {
               <span className="text-sm font-medium">Stock Actual</span>
               <span className="text-lg font-bold">{adjustmentForm.currentQuantity}</span>
             </div>
-
             <div className="space-y-2">
               <Label>Nueva Cantidad</Label>
               <Input
@@ -191,7 +303,6 @@ export default function Inventario() {
                 onChange={(e) => setAdjustmentForm({ ...adjustmentForm, newQuantity: parseInt(e.target.value) || 0 })}
               />
             </div>
-
             <div className="space-y-2">
               <Label>Motivo del Ajuste</Label>
               <Textarea
@@ -243,9 +354,6 @@ export default function Inventario() {
                   const productStocks = getProductStocks(item.id);
                   const total = productStocks.reduce((sum, s) => sum + s.quantity, 0);
 
-                  const diriambaLink = getProductStockEntry(item.id, 'diriamba');
-                  const jinotepeLink = getProductStockEntry(item.id, 'jinotepe');
-
                   return (
                     <tr key={item.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                       <td className="py-4 px-4 font-medium text-foreground">{item.name}</td>
@@ -275,16 +383,9 @@ export default function Inventario() {
                       )}
 
                       <td className="py-4 px-4 text-center font-bold">{total}</td>
-                      <td className="py-4 px-4 text-right font-medium">C$ {item.retailPrice.toLocaleString()}</td>
+                      <td className="py-4 px-4 text-right font-medium">C$ {(item.retailPrice / 100).toLocaleString('en-NI', { minimumFractionDigits: 2 })}</td>
                       <td className="py-4 px-4 text-center flex justify-center gap-1">
-                        {/* Main Action: Adjust if branch selected, or Edit Product */}
-                        <Button variant="ghost" size="sm" onClick={() => {
-                          // Default action: Adjust current branch stock if selected, else Diriamba? 
-                          // Or maybe open a "Product Edit"?
-                          // Request says "Edit" button should work. 
-                          // I'll wire it to console log as "Product Edit" placeholder but ensuring interactive
-                          console.log("Edit product details", item.id);
-                        }}>
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'all' ? 'diriamba' : currentBranchId)}>
@@ -304,5 +405,49 @@ export default function Inventario() {
         <span>Mostrando {filteredInventory.length} de {products.length} productos</span>
       </div>
     </DashboardLayout>
+  );
+}
+
+// Subcomponent for form fields to avoid duplication
+function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
+  return (
+    <div className="grid grid-cols-2 gap-4 py-4">
+      <div className="space-y-2 col-span-2">
+        <Label>Nombre del Producto</Label>
+        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Fertilizante Triple 15" />
+      </div>
+      <div className="space-y-2">
+        <Label>SKU / Código</Label>
+        <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="FERT-001" />
+      </div>
+      <div className="space-y-2">
+        <Label>Categoría</Label>
+        <Select value={form.category} onValueChange={(val) => setForm({ ...form, category: val })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Seleccionar..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="FERTILIZANTES">Fertilizantes</SelectItem>
+            <SelectItem value="HERBICIDAS">Herbicidas</SelectItem>
+            <SelectItem value="FUNGICIDAS">Fungicidas</SelectItem>
+            <SelectItem value="HERRAMIENTAS">Herramientas</SelectItem>
+            <SelectItem value="VETERINARIA">Veterinaria</SelectItem>
+            <SelectItem value="OTROS">Otros</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Precio Costo (C$)</Label>
+        <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })} />
+      </div>
+      <div className="space-y-2">
+        <Label>Precio Venta (C$)</Label>
+        <Input type="number" step="0.01" value={form.retailPrice} onChange={(e) => setForm({ ...form, retailPrice: parseFloat(e.target.value) || 0 })} />
+      </div>
+      <div className="space-y-2 col-span-2">
+        <Label>Descripción</Label>
+        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      </div>
+    </div>
   );
 }
