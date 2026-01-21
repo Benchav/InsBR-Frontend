@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Minus, ShoppingCart, User, CreditCard, Trash2, Percent, Receipt, DollarSign, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, User, Trash2, Percent, Receipt, DollarSign, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import {
@@ -68,8 +68,9 @@ export default function Ventas() {
 
   const [discount, setDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
+  const paymentMethod: 'CASH' = 'CASH';
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [customerName, setCustomerName] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
 
   // Cart Logic
@@ -88,6 +89,19 @@ export default function Ventas() {
         quantity: 1,
         sku: product.sku
       }];
+    });
+  };
+
+  const setQuantity = (id: string, quantity: number) => {
+    const safeQuantity = Math.max(0, Math.floor(quantity));
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === id);
+      if (!existing && safeQuantity > 0) {
+        return prev;
+      }
+      return prev
+        .map((item) => (item.id === id ? { ...item, quantity: safeQuantity } : item))
+        .filter((item) => item.quantity > 0);
     });
   };
 
@@ -115,7 +129,7 @@ export default function Ventas() {
   const amountPaidValue = Number(amountPaid);
   const amountPaidCents = Number.isFinite(amountPaidValue) ? toCents(amountPaidValue) : 0;
   const changeDue = Math.max(amountPaidCents - total, 0);
-  const isCashInsufficient = paymentMethod === 'CASH' && amountPaidCents < total;
+  const isCashInsufficient = amountPaidCents < total;
 
   // Checkout Logic
   const handleCheckout = () => {
@@ -123,7 +137,7 @@ export default function Ventas() {
       toast.error('Selecciona una sucursal específica para realizar ventas');
       return;
     }
-    setAmountPaid(toCurrency(total).toFixed(2));
+    setAmountPaid('');
     setIsCheckoutOpen(true);
   };
 
@@ -131,11 +145,12 @@ export default function Ventas() {
     mutationFn: salesApi.create,
     onSuccess: () => {
       toast.success('Venta registrada exitosamente', {
-        description: `Total: C$ ${total.toLocaleString()}`
+        description: `Total: ${formatCurrency(total)}`
       });
       clearCart();
       setIsCheckoutOpen(false);
       setCustomerName('');
+      setSelectedCustomerId('');
       setAmountPaid('');
       queryClient.invalidateQueries({ queryKey: ['stocks'] }); // Update stock
       queryClient.invalidateQueries({ queryKey: ['sales'] }); // Update dashboard if needed
@@ -149,7 +164,7 @@ export default function Ventas() {
   const handleConfirmSale = () => {
     if (currentBranchId === 'ALL') return;
 
-    if (paymentMethod === 'CASH' && amountPaidCents < total) {
+    if (amountPaidCents < total) {
       toast.error('Monto recibido insuficiente', {
         description: 'El efectivo ingresado debe cubrir el total a pagar.'
       });
@@ -165,6 +180,7 @@ export default function Ventas() {
       })),
       type: paymentMethod,
       customerId: selectedCustomerId || undefined,
+      customerName: selectedCustomerId ? undefined : (customerName.trim() || undefined),
       notes: undefined
     });
   };
@@ -265,7 +281,6 @@ export default function Ventas() {
                       <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
                     )}
                     <th className="table-header text-right py-3 px-2">Precio Unit.</th>
-                    <th className="table-header text-center py-3 px-2">Cantidad</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -281,7 +296,16 @@ export default function Ventas() {
                     const isLowStock = displayStock < 10;
 
                     return (
-                      <tr key={product.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <tr
+                        key={product.id}
+                        className={cn(
+                          'border-b border-border/50 cursor-pointer transition-colors',
+                          'hover:bg-primary/5 hover:ring-1 hover:ring-primary/30',
+                          cartItem && 'bg-primary/5'
+                        )}
+                        onClick={() => addToCart(product)}
+                        aria-selected={!!cartItem}
+                      >
                         <td className="py-3 px-2">
                           <div className="flex items-center gap-3">
                             <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
@@ -314,31 +338,6 @@ export default function Ventas() {
                         <td className="py-3 px-2 text-right font-medium">
                           {formatCurrency(product.retailPrice)}
                         </td>
-                        <td className="py-3 px-2">
-                          <div className="flex items-center justify-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(product.id, -1)}
-                              disabled={!cartItem}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">
-                              {cartItem?.quantity || 0}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 text-primary hover:bg-primary hover:text-primary-foreground"
-                              onClick={() => addToCart(product)}
-                              disabled={currentBranchId !== 'ALL' && (cartItem?.quantity || 0) >= stock}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })}
@@ -364,16 +363,58 @@ export default function Ventas() {
                 </p>
               ) : (
                 cart.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.quantity} x {formatCurrency(item.price)}
+                        {formatCurrency(item.price)} c/u
+                      </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => updateQuantity(item.id, -1)}
+                        >
+                          <span className="text-sm">-</span>
+                        </Button>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={item.quantity}
+                          onChange={(event) => {
+                            const nextValue = Number(event.target.value);
+                            if (!Number.isFinite(nextValue)) return;
+                            setQuantity(item.id, nextValue);
+                          }}
+                          onFocus={(event) => event.target.select()}
+                          className="h-7 w-16 text-center px-2"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => updateQuantity(item.id, 1)}
+                        >
+                          <span className="text-sm">+</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => setQuantity(item.id, 0)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Total</p>
+                      <p className="font-semibold text-sm">
+                        {formatCurrency(item.quantity * item.price)}
                       </p>
                     </div>
-                    <p className="font-semibold text-sm ml-2">
-                      {formatCurrency(item.quantity * item.price)}
-                    </p>
                   </div>
                 ))
               )}
@@ -427,7 +468,7 @@ export default function Ventas() {
                 disabled={cart.length === 0}
                 onClick={handleCheckout}
               >
-                <CreditCard className="mr-2 h-5 w-5" />
+                <DollarSign className="mr-2 h-5 w-5" />
                 Finalizar Venta
               </Button>
               <div className="flex gap-2">
@@ -455,7 +496,7 @@ export default function Ventas() {
           <DialogHeader>
             <DialogTitle>Confirmar Venta</DialogTitle>
             <DialogDescription>
-              Revisa los detalles y selecciona el método de pago.
+              Revisa los detalles y confirma el pago en efectivo.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -479,6 +520,10 @@ export default function Ventas() {
                 <span>Total a Pagar</span>
                 <span className="text-primary">{formatCurrency(total)}</span>
               </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Método de pago</span>
+                <Badge variant="secondary">Efectivo</Badge>
+              </div>
             </div>
 
             {/* Customer */}
@@ -487,7 +532,13 @@ export default function Ventas() {
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 {/* Use a simple Select for now since Shadcn Select is available */}
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                <Select
+                  value={selectedCustomerId}
+                  onValueChange={(value) => {
+                    setSelectedCustomerId(value);
+                    if (value) setCustomerName('');
+                  }}
+                >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Seleccionar Cliente..." />
                   </SelectTrigger>
@@ -498,65 +549,39 @@ export default function Ventas() {
                   </SelectContent>
                 </Select>
               </div>
+              <Input
+                placeholder="Nombre del cliente (si no está registrado)"
+                value={customerName}
+                onChange={(event) => {
+                  setCustomerName(event.target.value);
+                  if (event.target.value) setSelectedCustomerId('');
+                }}
+                className="mt-2"
+              />
             </div>
 
-            {/* Payment Method */}
             <div className="space-y-2">
-              <Label>Método de Pago</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={paymentMethod === 'CASH' ? 'default' : 'outline'}
-                  className="h-12"
-                  onClick={() => setPaymentMethod('CASH')}
-                >
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Contado
-                </Button>
-                <Button
-                  type="button"
-                  variant={paymentMethod === 'CREDIT' ? 'default' : 'outline'}
-                  className="h-12"
-                  onClick={() => setPaymentMethod('CREDIT')}
-                >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Crédito
-                </Button>
+              <Label>Monto recibido</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={amountPaid}
+                  onChange={(event) => setAmountPaid(event.target.value)}
+                  className="pl-10"
+                  placeholder="0.00"
+                />
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Vuelto</span>
+                <span className="font-semibold">{formatCurrency(changeDue)}</span>
+              </div>
+              {amountPaid.trim() !== '' && isCashInsufficient && (
+                <p className="text-xs text-destructive">El monto ingresado no cubre el total.</p>
+              )}
             </div>
-
-            {paymentMethod === 'CASH' && (
-              <div className="space-y-2">
-                <Label>Monto recibido</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={amountPaid}
-                    onChange={(event) => setAmountPaid(event.target.value)}
-                    className="pl-10"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Vuelto</span>
-                  <span className="font-semibold">{formatCurrency(changeDue)}</span>
-                </div>
-                {amountPaid.trim() !== '' && isCashInsufficient && (
-                  <p className="text-xs text-destructive">El monto ingresado no cubre el total.</p>
-                )}
-              </div>
-            )}
-
-            {paymentMethod === 'CREDIT' && (
-              <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
-                <p className="text-sm text-warning font-medium">
-                  Se creará una cuenta por cobrar para este cliente.
-                </p>
-              </div>
-            )}
 
             {createSaleMutation.isError && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
