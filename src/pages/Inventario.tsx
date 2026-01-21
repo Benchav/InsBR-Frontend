@@ -65,12 +65,12 @@ export default function Inventario() {
   // Queries
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products'],
-    queryFn: productsApi.getAll,
+    queryFn: () => productsApi.getAll(),
   });
 
   const { data: stocks = [], isLoading: isLoadingStocks } = useQuery({
     queryKey: ['stocks'],
-    queryFn: stockApi.getMyBranchStock,
+    queryFn: () => stockApi.getMyBranchStock(),
   });
 
   // Mutations

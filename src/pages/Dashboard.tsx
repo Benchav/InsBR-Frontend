@@ -18,7 +18,7 @@ export default function Dashboard() {
 
   const { data: sales = [], isLoading } = useQuery({
     queryKey: ['sales', currentBranchId], // Recalculate when branch changes (though usually we filter client side if API returns all, but good practice)
-    queryFn: salesApi.getAll,
+    queryFn: () => salesApi.getAll(),
   });
 
   const stats = useMemo(() => {

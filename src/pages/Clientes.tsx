@@ -43,7 +43,7 @@ export default function Clientes() {
     // Queries
     const { data: customers = [], isLoading } = useQuery({
         queryKey: ['customers'],
-        queryFn: customersApi.getAll,
+        queryFn: () => customersApi.getAll(),
     });
 
     // Mutations

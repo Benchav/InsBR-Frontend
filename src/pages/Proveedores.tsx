@@ -43,7 +43,7 @@ export default function Proveedores() {
     // Queries
     const { data: suppliers = [], isLoading } = useQuery({
         queryKey: ['suppliers'],
-        queryFn: suppliersApi.getAll,
+        queryFn: () => suppliersApi.getAll(),
     });
 
     // Mutations

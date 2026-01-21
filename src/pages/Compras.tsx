@@ -44,12 +44,12 @@ export default function Compras() {
 
   const { data: purchases = [], isLoading } = useQuery({
     queryKey: ['purchases'],
-    queryFn: purchasesApi.getAll,
+    queryFn: () => purchasesApi.getAll(),
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: productsApi.getAll
+    queryFn: () => productsApi.getAll()
   });
 
   const createPurchaseMutation = useMutation({

@@ -51,7 +51,7 @@ export const authApi = {
 
   // Get all users (Admin only)
   getAllUsers: async (): Promise<User[]> => {
-    const { data } = await apiClient.get('/api/auth/users');
+    const { data } = await apiClient.get('/api/users');
     return data;
   },
 
@@ -71,7 +71,7 @@ export const authApi = {
     // Note: branchId removed from payload as per strict instruction, 
     // unless backend actually supports it. Keeping strictly to "Payload esperado".
 
-    const { data } = await apiClient.put(`/api/auth/users/${id}`, payload);
+    const { data } = await apiClient.put(`/api/users/${id}`, payload);
     return data;
   },
 

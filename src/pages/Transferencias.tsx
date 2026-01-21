@@ -62,12 +62,12 @@ export default function Transferencias() {
   // Data Fetching
   const { data: transfers = [], isLoading } = useQuery({
     queryKey: ['transfers'],
-    queryFn: transfersApi.getAll
+    queryFn: () => transfersApi.getAll()
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: productsApi.getAll
+    queryFn: () => productsApi.getAll()
   });
 
   // Mutations
