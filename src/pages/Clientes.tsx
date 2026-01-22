@@ -179,7 +179,7 @@ export default function Clientes() {
             <div className="text-sm text-muted-foreground">{filteredCustomers.length} clientes</div>
           </div>
 
-          <div className="mt-4 rounded-md border">
+          <div className="mt-4 rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

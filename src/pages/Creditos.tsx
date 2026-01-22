@@ -169,8 +169,8 @@ export default function Creditos() {
             <div className="text-sm text-muted-foreground">{filteredCredits.length} cuentas</div>
           </div>
 
-          <div className="mt-4 rounded-md border">
-            <Table>
+          <div className="mt-4 rounded-md border overflow-x-auto">
+            <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>

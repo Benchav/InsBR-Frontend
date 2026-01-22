@@ -43,11 +43,13 @@ const SidebarContent = ({
   user,
   locationPath,
   onLogout,
+  onNavigate,
 }: {
   visibleItems: typeof navigationItems;
   user: ReturnType<typeof useAuth>['user'];
   locationPath: string;
   onLogout: () => void;
+  onNavigate?: () => void;
 }) => (
   <div className="flex h-full flex-col">
     {/* Logo */}
@@ -84,6 +86,7 @@ const SidebarContent = ({
           <Link
             key={item.name}
             to={item.href}
+            onClick={onNavigate}
             className={cn('sidebar-item', isActive && 'sidebar-item-active')}
           >
             <item.icon className="h-5 w-5" />
@@ -133,6 +136,7 @@ export function AppSidebar({
             user={user}
             locationPath={location.pathname}
             onLogout={logout}
+            onNavigate={() => onMobileOpenChange(false)}
           />
         </SheetContent>
       </Sheet>

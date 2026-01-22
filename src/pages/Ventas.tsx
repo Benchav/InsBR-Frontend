@@ -236,7 +236,7 @@ export default function Ventas() {
 
   return (
     <DashboardLayout>
-      <div className="flex gap-6 h-[calc(100vh-7rem)]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:h-[calc(100vh-7rem)]">
         {/* Products Section */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
@@ -250,7 +250,7 @@ export default function Ventas() {
           </div>
 
           {/* Search and Filters */}
-          <div className="flex gap-3 mb-4">
+          <div className="flex flex-col gap-3 mb-4 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -284,7 +284,8 @@ export default function Ventas() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : (
-              <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[620px]">
                 <thead className="sticky top-0 bg-background z-10">
                   <tr className="border-b border-border">
                     <th className="table-header text-left py-3 px-2">Producto</th>
@@ -355,14 +356,15 @@ export default function Ventas() {
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
 
         {/* Cart Section */}
-        <div className="w-96 flex flex-col">
+        <div className="w-full lg:w-96 flex flex-col">
           <Card className="flex-1 flex flex-col p-4 rounded-xl">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />

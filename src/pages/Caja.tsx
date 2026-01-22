@@ -192,8 +192,8 @@ export default function Caja() {
             <div className="text-sm text-muted-foreground">{movements.length} movimientos</div>
           </div>
 
-          <div className="mt-4 rounded-md border">
-            <Table>
+          <div className="mt-4 rounded-md border overflow-x-auto">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
