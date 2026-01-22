@@ -25,6 +25,7 @@ import { Search, Plus, Pencil, Trash2, Loader2, Truck } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { suppliersApi, Supplier, CreateSupplierDto } from '@/api/suppliers.api';
 import { toast } from 'sonner';
+import { useBranchStore } from '@/stores/branchStore';
 
 const defaultForm: CreateSupplierDto = {
   name: '',
@@ -39,6 +40,8 @@ const defaultForm: CreateSupplierDto = {
 };
 
 export default function Proveedores() {
+  const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -46,8 +49,8 @@ export default function Proveedores() {
   const [formData, setFormData] = useState<CreateSupplierDto>(defaultForm);
 
   const { data: suppliers = [], isLoading } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: suppliersApi.getAll,
+    queryKey: ['suppliers', branchId],
+    queryFn: () => suppliersApi.getAll(branchId ? { branchId } : undefined),
   });
 
   const createMutation = useMutation({

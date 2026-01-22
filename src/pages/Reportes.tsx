@@ -18,7 +18,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -26,6 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { salesApi } from '@/api/sales.api';
+import { productsApi } from '@/api/products.api';
+import { customersApi } from '@/api/customers.api';
+import { formatCurrency, formatCurrencyShort } from '@/utils/formatters';
 import {
   LineChart,
   Line,
@@ -42,35 +47,6 @@ import {
   Cell,
 } from 'recharts';
 
-const revenueData = [
-  { month: 'Ene', diriamba: 45000, jinotepe: 38000 },
-  { month: 'Feb', diriamba: 52000, jinotepe: 42000 },
-  { month: 'Mar', diriamba: 48000, jinotepe: 45000 },
-  { month: 'Abr', diriamba: 61000, jinotepe: 52000 },
-  { month: 'May', diriamba: 55000, jinotepe: 48000 },
-  { month: 'Jun', diriamba: 67000, jinotepe: 58000 },
-  { month: 'Jul', diriamba: 72000, jinotepe: 63000 },
-  { month: 'Ago', diriamba: 68000, jinotepe: 59000 },
-  { month: 'Sep', diriamba: 74000, jinotepe: 65000 },
-  { month: 'Oct', diriamba: 82000, jinotepe: 71000 },
-];
-
-const categoryData = [
-  { name: 'Fertilizantes', value: 45, color: 'hsl(var(--primary))' },
-  { name: 'Semillas', value: 25, color: 'hsl(var(--success))' },
-  { name: 'Herbicidas', value: 15, color: 'hsl(var(--warning))' },
-  { name: 'Fungicidas', value: 10, color: 'hsl(var(--info))' },
-  { name: 'Otros', value: 5, color: 'hsl(var(--muted-foreground))' },
-];
-
-const topProducts = [
-  { name: 'Urea Granulada 46%', sales: 1250, revenue: 1062500, trend: 12 },
-  { name: 'Fertilizante NPK 15-15-15', sales: 890, revenue: 578500, trend: 8 },
-  { name: 'Semilla Maíz Híbrido DK-4050', sales: 450, revenue: 1440000, trend: -3 },
-  { name: 'Herbicida Glifosato 5L', sales: 380, revenue: 456000, trend: 15 },
-  { name: 'Insecticida Cipermetrina', sales: 320, revenue: 121600, trend: 5 },
-];
-
 const reportTypes = [
   { id: 'ventas', name: 'Reporte de Ventas', icon: ShoppingCart, description: 'Análisis detallado de ventas por período' },
   { id: 'inventario', name: 'Reporte de Inventario', icon: Package, description: 'Estado actual del stock y movimientos' },
@@ -80,14 +56,188 @@ const reportTypes = [
 
 export default function Reportes() {
   const { currentBranchId, getCurrentBranch } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
+  const isAllBranches = currentBranchId === 'ALL';
   const currentBranch = getCurrentBranch();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
 
-  // Calculate totals
-  const totalRevenue = revenueData.reduce((sum, d) => sum + d.diriamba + d.jinotepe, 0);
-  const lastMonthRevenue = revenueData[revenueData.length - 1].diriamba + revenueData[revenueData.length - 1].jinotepe;
-  const prevMonthRevenue = revenueData[revenueData.length - 2].diriamba + revenueData[revenueData.length - 2].jinotepe;
-  const revenueTrend = ((lastMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100;
+  const { data: sales = [] } = useQuery({
+    queryKey: ['sales-report', branchId],
+    queryFn: () => salesApi.getAll(branchId ? { branchId } : undefined),
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-report'],
+    queryFn: () => productsApi.getAll(),
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers-report', branchId],
+    queryFn: () => customersApi.getAll({ isActive: true, branchId }),
+  });
+
+  const getPeriodRange = (period: string) => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    let start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (period === 'week') {
+      start.setDate(start.getDate() - 6);
+    } else if (period === 'month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (period === 'quarter') {
+      const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+      start = new Date(now.getFullYear(), quarterStartMonth, 1);
+    } else if (period === 'year') {
+      start = new Date(now.getFullYear(), 0, 1);
+    }
+
+    const prevEnd = new Date(start.getTime() - 1);
+    const prevStart = new Date(start);
+    if (period === 'week') {
+      prevStart.setDate(prevStart.getDate() - 7);
+    } else if (period === 'month') {
+      prevStart.setMonth(prevStart.getMonth() - 1);
+    } else if (period === 'quarter') {
+      prevStart.setMonth(prevStart.getMonth() - 3);
+    } else if (period === 'year') {
+      prevStart.setFullYear(prevStart.getFullYear() - 1);
+    }
+
+    return { start, end, prevStart, prevEnd };
+  };
+
+  const periodSales = useMemo(() => {
+    const { start, end } = getPeriodRange(selectedPeriod);
+    return sales.filter((sale) => {
+      if (!sale.createdAt) return false;
+      const date = new Date(sale.createdAt);
+      return date >= start && date <= end;
+    });
+  }, [sales, selectedPeriod]);
+
+  const previousPeriodSales = useMemo(() => {
+    const { prevStart, prevEnd } = getPeriodRange(selectedPeriod);
+    return sales.filter((sale) => {
+      if (!sale.createdAt) return false;
+      const date = new Date(sale.createdAt);
+      return date >= prevStart && date <= prevEnd;
+    });
+  }, [sales, selectedPeriod]);
+
+  const revenueData = useMemo(() => {
+    const today = new Date();
+    const months = Array.from({ length: 10 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth() - (9 - index), 1);
+      const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      return {
+        key,
+        month: date.toLocaleDateString('es-NI', { month: 'short' }),
+        diriamba: 0,
+        jinotepe: 0,
+        total: 0,
+      };
+    });
+
+    const map = new Map(months.map((entry) => [entry.key, entry]));
+    sales.forEach((sale) => {
+      if (!sale.createdAt) return;
+      const date = new Date(sale.createdAt);
+      const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      const bucket = map.get(key);
+      if (!bucket) return;
+      bucket.total += sale.total;
+      if (sale.branchId === 'BRANCH-DIR-001') bucket.diriamba += sale.total;
+      if (sale.branchId === 'BRANCH-DIR-002') bucket.jinotepe += sale.total;
+    });
+
+    return months;
+  }, [sales]);
+
+  const totalRevenue = useMemo(
+    () => periodSales.reduce((sum, sale) => sum + sale.total, 0),
+    [periodSales]
+  );
+
+  const previousPeriodRevenue = useMemo(
+    () => previousPeriodSales.reduce((sum, sale) => sum + sale.total, 0),
+    [previousPeriodSales]
+  );
+
+  const revenueTrend = useMemo(() => {
+    if (previousPeriodRevenue === 0) return totalRevenue > 0 ? 100 : 0;
+    return ((totalRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100;
+  }, [previousPeriodRevenue, totalRevenue]);
+
+  const averageTicket = useMemo(() => {
+    if (periodSales.length === 0) return 0;
+    return Math.round(totalRevenue / periodSales.length);
+  }, [periodSales, totalRevenue]);
+
+  const categoryData = useMemo(() => {
+    const productCategoryMap = new Map(products.map((product) => [product.id, product.category || 'Otros']));
+    const totals = new Map<string, number>();
+
+    periodSales.forEach((sale) => {
+      sale.items.forEach((item) => {
+        const category = productCategoryMap.get(item.productId) || 'Otros';
+        const itemTotal = item.subtotal ?? item.unitPrice * item.quantity;
+        totals.set(category, (totals.get(category) || 0) + itemTotal);
+      });
+    });
+
+    const overall = Array.from(totals.values()).reduce((sum, value) => sum + value, 0);
+    if (!overall) {
+      return [{ name: 'Sin datos', value: 100, color: 'hsl(var(--muted-foreground))' }];
+    }
+
+    const palette = [
+      'hsl(var(--primary))',
+      'hsl(var(--success))',
+      'hsl(var(--warning))',
+      'hsl(var(--info))',
+      'hsl(var(--muted-foreground))',
+    ];
+
+    return Array.from(totals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, value], index) => ({
+        name,
+        value: Math.round((value / overall) * 100),
+        color: palette[index % palette.length],
+      }));
+  }, [products, periodSales]);
+
+  const topProducts = useMemo(() => {
+    const buildTotals = (salesList: typeof sales) => {
+      const totals = new Map<string, { name: string; sales: number; revenue: number }>();
+      salesList.forEach((sale) => {
+        sale.items.forEach((item) => {
+          const name = item.productName || item.productId;
+          const current = totals.get(name) || { name, sales: 0, revenue: 0 };
+          const itemTotal = item.subtotal ?? item.unitPrice * item.quantity;
+          current.sales += item.quantity;
+          current.revenue += itemTotal;
+          totals.set(name, current);
+        });
+      });
+      return totals;
+    };
+
+    const currentTotals = buildTotals(periodSales);
+    const previousTotals = buildTotals(previousPeriodSales);
+
+    return Array.from(currentTotals.values())
+      .map((item) => {
+        const prev = previousTotals.get(item.name);
+        const prevRevenue = prev?.revenue ?? 0;
+        const trend = prevRevenue === 0 ? (item.revenue > 0 ? 100 : 0) : ((item.revenue - prevRevenue) / prevRevenue) * 100;
+        return { ...item, trend: Math.round(trend) };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }, [periodSales, previousPeriodSales]);
 
   return (
     <DashboardLayout>
@@ -128,7 +278,7 @@ export default function Reportes() {
               <DollarSign className="h-5 w-5 text-primary" />
             </div>
           </div>
-          <p className="text-2xl font-bold">C$ {(totalRevenue / 1000).toFixed(0)}K</p>
+          <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
           <div className="flex items-center gap-1 mt-1">
             {revenueTrend >= 0 ? (
               <ArrowUpRight className="h-4 w-4 text-success" />
@@ -141,7 +291,7 @@ export default function Reportes() {
             )}>
               {revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%
             </span>
-            <span className="text-sm text-muted-foreground">vs mes anterior</span>
+            <span className="text-sm text-muted-foreground">vs período anterior</span>
           </div>
         </div>
 
@@ -152,11 +302,11 @@ export default function Reportes() {
               <ShoppingCart className="h-5 w-5 text-success" />
             </div>
           </div>
-          <p className="text-2xl font-bold">2,847</p>
+          <p className="text-2xl font-bold">{periodSales.length.toLocaleString()}</p>
           <div className="flex items-center gap-1 mt-1">
             <ArrowUpRight className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">+8.2%</span>
-            <span className="text-sm text-muted-foreground">vs mes anterior</span>
+            <span className="text-sm font-medium text-success">{revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%</span>
+            <span className="text-sm text-muted-foreground">vs período anterior</span>
           </div>
         </div>
 
@@ -167,11 +317,11 @@ export default function Reportes() {
               <BarChart3 className="h-5 w-5 text-warning" />
             </div>
           </div>
-          <p className="text-2xl font-bold">C$ 1,850</p>
+          <p className="text-2xl font-bold">{formatCurrency(averageTicket)}</p>
           <div className="flex items-center gap-1 mt-1">
             <ArrowUpRight className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">+3.5%</span>
-            <span className="text-sm text-muted-foreground">vs mes anterior</span>
+            <span className="text-sm font-medium text-success">{revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%</span>
+            <span className="text-sm text-muted-foreground">vs período anterior</span>
           </div>
         </div>
 
@@ -182,11 +332,11 @@ export default function Reportes() {
               <Users className="h-5 w-5 text-info" />
             </div>
           </div>
-          <p className="text-2xl font-bold">156</p>
+          <p className="text-2xl font-bold">{customers.length.toLocaleString()}</p>
           <div className="flex items-center gap-1 mt-1">
             <ArrowUpRight className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">+12</span>
-            <span className="text-sm text-muted-foreground">nuevos este mes</span>
+            <span className="text-sm font-medium text-success">{revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%</span>
+            <span className="text-sm text-muted-foreground">vs período anterior</span>
           </div>
         </div>
       </div>
@@ -198,41 +348,60 @@ export default function Reportes() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-foreground">Tendencia de Ingresos</h3>
-              <p className="text-sm text-muted-foreground">Comparativa Diriamba vs Jinotepe</p>
+              <p className="text-sm text-muted-foreground">
+                {isAllBranches ? 'Comparativa Diriamba vs Jinotepe' : `Sucursal: ${currentBranch.name}`}
+              </p>
             </div>
-            <Badge variant="secondary">2024</Badge>
+            <Badge variant="secondary">{new Date().getFullYear()}</Badge>
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `C$ ${v/1000}K`} />
+                <YAxis
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={12}
+                  tickFormatter={(value: number) => formatCurrencyShort(value)}
+                />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
                   }}
-                  formatter={(value: number) => [`C$ ${value.toLocaleString()}`, '']}
+                  formatter={(value: number) => [formatCurrency(value), '']}
                 />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="diriamba" 
-                  name="Diriamba"
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--primary))' }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="jinotepe" 
-                  name="Jinotepe"
-                  stroke="hsl(var(--success))" 
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--success))' }}
-                />
+                {isAllBranches ? (
+                  <>
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="diriamba" 
+                      name="Diriamba"
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--primary))' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="jinotepe" 
+                      name="Jinotepe"
+                      stroke="hsl(var(--success))" 
+                      strokeWidth={2}
+                      dot={{ fill: 'hsl(var(--success))' }}
+                    />
+                  </>
+                ) : (
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    name={currentBranch.shortName}
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--primary))' }}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -297,33 +466,37 @@ export default function Reportes() {
             <Button variant="ghost" size="sm">Ver todos</Button>
           </div>
           <div className="space-y-4">
-            {topProducts.map((product, idx) => (
-              <div key={product.name} className="flex items-center gap-4">
-                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                  {idx + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">{product.sales.toLocaleString()} unidades</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">C$ {(product.revenue / 1000).toFixed(0)}K</p>
-                  <div className="flex items-center justify-end gap-1">
-                    {product.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-success" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-destructive" />
-                    )}
-                    <span className={cn(
-                      'text-xs font-medium',
-                      product.trend >= 0 ? 'text-success' : 'text-destructive'
-                    )}>
-                      {product.trend >= 0 ? '+' : ''}{product.trend}%
-                    </span>
+            {topProducts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay ventas para mostrar.</p>
+            ) : (
+              topProducts.map((product, idx) => (
+                <div key={product.name} className="flex items-center gap-4">
+                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{product.name}</p>
+                    <p className="text-sm text-muted-foreground">{product.sales.toLocaleString()} unidades</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">{formatCurrencyShort(product.revenue)}</p>
+                    <div className="flex items-center justify-end gap-1">
+                      {product.trend >= 0 ? (
+                        <TrendingUp className="h-3 w-3 text-success" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-destructive" />
+                      )}
+                      <span className={cn(
+                        'text-xs font-medium',
+                        product.trend >= 0 ? 'text-success' : 'text-destructive'
+                      )}>
+                        {product.trend >= 0 ? '+' : ''}{product.trend}%
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

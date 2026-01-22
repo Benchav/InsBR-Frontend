@@ -1,8 +1,12 @@
-import { useBranchStore, BranchId, BRANCHES } from '@/stores/branchStore';
+import { useBranchStore, BRANCHES } from '@/stores/branchStore';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function BranchTabs() {
+  const { user } = useAuth();
   const { currentBranchId, setCurrentBranch } = useBranchStore();
+
+  if (user?.role !== 'ADMIN') return null;
 
   return (
     <div className="inline-flex rounded-lg bg-muted p-1">

@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils';
 import { Search, Filter, Download, Plus, DollarSign, Package, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { purchasesApi, CreatePurchaseDto } from '@/api/purchases.api';
+import { purchasesApi, CreatePurchaseDto, Purchase } from '@/api/purchases.api';
 import { productsApi } from '@/api/products.api';
+import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,8 @@ export default function Compras() {
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
+  const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Create Purchase State
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -95,6 +98,11 @@ export default function Compras() {
       ...prev,
       items: prev.items?.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleViewPurchase = (purchase: (typeof purchases)[number]) => {
+    setViewPurchase(purchase);
+    setIsViewOpen(true);
   };
 
   const calculateTotal = () => {
@@ -383,10 +391,12 @@ export default function Compras() {
                       {new Date(purchase.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-4 px-4 text-right font-semibold">
-                      C$ {purchase.total.toLocaleString()}
+                      {formatCurrency(purchase.total)}
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <Button variant="ghost" size="sm">Ver</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleViewPurchase(purchase)}>
+                        Ver
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -395,6 +405,88 @@ export default function Compras() {
           )}
         </div>
       </div>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Detalle de Compra</DialogTitle>
+            <DialogDescription>Resumen de la orden seleccionada.</DialogDescription>
+          </DialogHeader>
+
+          {viewPurchase ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Orden</p>
+                  <p className="font-medium text-foreground">{viewPurchase.id}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Fecha</p>
+                  <p className="font-medium text-foreground">{formatDateTime(viewPurchase.createdAt)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Proveedor</p>
+                  <p className="font-medium text-foreground">{viewPurchase.supplierId}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Sucursal</p>
+                  <p className="font-medium text-foreground">{viewPurchase.branchId}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Tipo</p>
+                  <p className="font-medium text-foreground">
+                    {viewPurchase.type === 'CASH' ? 'Contado' : 'Crédito'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Método de Pago</p>
+                  <p className="font-medium text-foreground">{viewPurchase.paymentMethod || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Factura</p>
+                  <p className="font-medium text-foreground">{viewPurchase.invoiceNumber || '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Total</p>
+                  <p className="font-semibold text-foreground">{formatCurrency(viewPurchase.total)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-md border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      <th className="text-left px-3 py-2">Producto</th>
+                      <th className="text-right px-3 py-2">Cant.</th>
+                      <th className="text-right px-3 py-2">Costo</th>
+                      <th className="text-right px-3 py-2">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewPurchase.items.map((item, index) => (
+                      <tr key={`${item.productId}-${index}`} className="border-t">
+                        <td className="px-3 py-2">{item.productName || item.productId}</td>
+                        <td className="px-3 py-2 text-right">{item.quantity}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(item.unitCost)}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(item.subtotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {viewPurchase.notes && (
+                <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                  <p className="text-muted-foreground">Notas</p>
+                  <p className="text-foreground">{viewPurchase.notes}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No hay información disponible.</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

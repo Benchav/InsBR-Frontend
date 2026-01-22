@@ -30,8 +30,10 @@ export interface CreateSupplierDto {
 export interface UpdateSupplierDto extends Partial<CreateSupplierDto> {}
 
 export const suppliersApi = {
-    getAll: async (): Promise<Supplier[]> => {
-        const { data } = await apiClient.get('/api/suppliers');
+    getAll: async (filters?: { branchId?: string }): Promise<Supplier[]> => {
+        const { data } = await apiClient.get('/api/suppliers', {
+            params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+        });
         return data;
     },
 
