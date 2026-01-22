@@ -3,7 +3,7 @@ import { useBranchStore } from '@/stores/branchStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, Download, Plus, Loader2, Edit, ArrowLeftRight } from 'lucide-react';
+import { Search, Filter, Download, Plus, Loader2, Edit, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -47,10 +47,12 @@ export default function Inventario() {
   // Forms
   const [adjustmentForm, setAdjustmentForm] = useState({
     newQuantity: 0,
+    addQuantity: 0,
     reason: '',
     productName: '',
     currentQuantity: 0
   });
+  const [adjustMode, setAdjustMode] = useState<'add' | 'set'>('add');
 
   const [productForm, setProductForm] = useState({
     name: '',
@@ -163,10 +165,12 @@ export default function Inventario() {
     setSelectedStockId(stockEntry.id);
     setAdjustmentForm({
       newQuantity: stockEntry.quantity,
+      addQuantity: 0,
       reason: '',
       productName,
       currentQuantity: stockEntry.quantity
     });
+    setAdjustMode('add');
     setIsAdjustDialogOpen(true);
   };
 
@@ -286,24 +290,71 @@ export default function Inventario() {
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajustar Stock: {adjustmentForm.productName}</DialogTitle>
+            <DialogTitle>{adjustMode === 'add' ? 'Agregar Stock' : 'Editar Stock'}: {adjustmentForm.productName}</DialogTitle>
             <DialogDescription>
-              Actualiza la cantidad física disponible. Esta acción quedará registrada.
+              {adjustMode === 'add'
+                ? 'Suma inventario al stock actual. Esta acción quedará registrada.'
+                : 'Define el stock correcto si hubo un error. Esta acción quedará registrada.'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="inline-flex w-full rounded-lg bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => setAdjustMode('add')}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all',
+                  adjustMode === 'add'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Agregar
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdjustMode('set')}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all',
+                  adjustMode === 'set'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Editar
+              </button>
+            </div>
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <span className="text-sm font-medium">Stock Actual</span>
               <span className="text-lg font-bold">{adjustmentForm.currentQuantity}</span>
             </div>
             <div className="space-y-2">
-              <Label>Nueva Cantidad</Label>
+              <Label>{adjustMode === 'add' ? 'Cantidad a Agregar' : 'Cantidad Correcta'}</Label>
               <Input
                 type="number"
                 min="0"
-                value={adjustmentForm.newQuantity}
-                onChange={(e) => setAdjustmentForm({ ...adjustmentForm, newQuantity: parseInt(e.target.value) || 0 })}
+                value={adjustMode === 'add' ? adjustmentForm.addQuantity : adjustmentForm.newQuantity}
+                onChange={(e) => {
+                  const value = Math.max(0, parseInt(e.target.value) || 0);
+                  if (adjustMode === 'add') {
+                    setAdjustmentForm({
+                      ...adjustmentForm,
+                      addQuantity: value,
+                      newQuantity: adjustmentForm.currentQuantity + value,
+                    });
+                  } else {
+                    setAdjustmentForm({
+                      ...adjustmentForm,
+                      newQuantity: value,
+                      addQuantity: Math.max(0, value - adjustmentForm.currentQuantity),
+                    });
+                  }
+                }}
               />
+            </div>
+            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg">
+              <span className="text-sm font-medium">Stock Resultante</span>
+              <span className="text-lg font-bold text-primary">{adjustmentForm.newQuantity}</span>
             </div>
             <div className="space-y-2">
               <Label>Motivo del Ajuste</Label>
@@ -320,9 +371,13 @@ export default function Inventario() {
               stockId: selectedStockId!,
               newQuantity: adjustmentForm.newQuantity,
               reason: adjustmentForm.reason
-            })} disabled={adjustStockMutation.isPending || !adjustmentForm.reason}>
+            })} disabled={
+              adjustStockMutation.isPending ||
+              !adjustmentForm.reason ||
+              (adjustMode === 'add' ? adjustmentForm.addQuantity <= 0 : false)
+            }>
               {adjustStockMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirmar Ajuste
+              {adjustMode === 'add' ? 'Confirmar Agregado' : 'Confirmar Edición'}
             </Button>
           </div>
         </DialogContent>
@@ -390,8 +445,13 @@ export default function Inventario() {
                         <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}>
-                          <ArrowLeftRight className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}
+                          title="Agregar stock manual"
+                        >
+                          <PlusCircle className="h-4 w-4" />
                         </Button>
                       </td>
                     </tr>
