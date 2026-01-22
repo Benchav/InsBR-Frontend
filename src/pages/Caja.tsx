@@ -38,6 +38,7 @@ import { useBranchStore } from '@/stores/branchStore';
 export default function Caja() {
   const { user } = useAuth();
   const isReadOnly = user?.role === 'CAJERO';
+  const isAdmin = user?.role === 'ADMIN';
   const { currentBranchId } = useBranchStore();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [startDate, setStartDate] = useState('');
@@ -53,12 +54,12 @@ export default function Caja() {
 
   const { data: balance } = useQuery({
     queryKey: ['cash-balance', branchId],
-    queryFn: () => cashApi.getBalance(branchId ? { branchId } : undefined),
+    queryFn: () => cashApi.getBalance(isAdmin && branchId ? { branchId } : undefined),
   });
 
   const { data: dailyRevenue } = useQuery({
     queryKey: ['cash-daily-revenue', branchId],
-    queryFn: () => cashApi.getDailyRevenue(branchId ? { branchId } : undefined),
+    queryFn: () => cashApi.getDailyRevenue(isAdmin && branchId ? { branchId } : undefined),
   });
 
   const {
@@ -70,7 +71,7 @@ export default function Caja() {
       cashApi.getMovements({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        branchId,
+        branchId: isAdmin ? branchId : undefined,
       }),
   });
 
@@ -142,7 +143,7 @@ export default function Caja() {
               <div>
                 <p className="text-sm text-muted-foreground">Balance Actual</p>
                 <p className="text-xl font-semibold text-foreground">
-                  {formatCurrency(balance?.balance ?? 0)}
+                  {formatCurrency(balance?.netBalance ?? 0)}
                 </p>
               </div>
             </div>
@@ -155,7 +156,7 @@ export default function Caja() {
               <div>
                 <p className="text-sm text-muted-foreground">Ingresos del Día</p>
                 <p className="text-xl font-semibold text-foreground">
-                  {formatCurrency(dailyRevenue?.totalRevenue ?? 0)}
+                  {formatCurrency(dailyRevenue?.income ?? 0)}
                 </p>
               </div>
             </div>

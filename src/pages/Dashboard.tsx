@@ -12,6 +12,7 @@ import { formatCurrency, formatCurrencyShort, formatDateTime } from '@/utils/for
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { BRANCHES } from '@/stores/branchStore';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   ResponsiveContainer,
   BarChart,
@@ -23,18 +24,31 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const { currentBranchId } = useBranchStore();
+  const isAllBranches = isAdmin && currentBranchId === 'ALL';
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
+  const cashBranchFilter = isAdmin ? (branchId ? { branchId } : undefined) : undefined;
+
+  const { data: consolidatedRevenue, isLoading: isLoadingConsolidated } = useQuery({
+    queryKey: ['cash-consolidated-revenue'],
+    queryFn: () => cashApi.getConsolidatedRevenue(),
+    enabled: isAllBranches,
+    refetchInterval: 30000,
+  });
 
   const { data: dailyRevenue, isLoading: isLoadingRevenue } = useQuery({
     queryKey: ['cash-daily-revenue', branchId],
-    queryFn: () => cashApi.getDailyRevenue({ branchId }),
+    queryFn: () => cashApi.getDailyRevenue(cashBranchFilter),
+    enabled: !isAllBranches,
     refetchInterval: 30000,
   });
 
   const { data: cashBalance, isLoading: isLoadingBalance } = useQuery({
     queryKey: ['cash-balance', branchId],
-    queryFn: () => cashApi.getBalance({ branchId }),
+    queryFn: () => cashApi.getBalance(cashBranchFilter),
+    enabled: !isAllBranches,
     refetchInterval: 30000,
   });
 
@@ -67,6 +81,17 @@ export default function Dashboard() {
     queryFn: () => salesApi.getAll(branchId ? { branchId } : undefined),
     refetchInterval: 30000,
   });
+
+  const revenueValue = isAllBranches
+    ? consolidatedRevenue?.totals.income ?? 0
+    : dailyRevenue?.income ?? 0;
+
+  const balanceValue = isAllBranches
+    ? consolidatedRevenue?.totals.netBalance ?? 0
+    : cashBalance?.netBalance ?? 0;
+
+  const consolidatedBranches = consolidatedRevenue?.branches ?? [];
+  const consolidatedTotals = consolidatedRevenue?.totals;
 
   const pendingCreditsAmount = useMemo(() => {
     return pendingCredits.reduce((sum, credit) => sum + credit.balanceAmount, 0);
@@ -144,14 +169,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <KPICard
           title="Ventas del Día"
-          value={isLoadingRevenue ? "..." : formatCurrency(dailyRevenue?.totalRevenue ?? 0)}
-          icon={isLoadingRevenue ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <DollarSign className="h-6 w-6 text-primary" />}
+          value={(isAllBranches ? isLoadingConsolidated : isLoadingRevenue) ? "..." : formatCurrency(revenueValue)}
+          icon={(isAllBranches ? isLoadingConsolidated : isLoadingRevenue) ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <DollarSign className="h-6 w-6 text-primary" />}
           iconBgClass="bg-primary/10"
         />
         <KPICard
           title="Balance de Caja"
-          value={isLoadingBalance ? "..." : formatCurrency(cashBalance?.balance ?? 0)}
-          icon={isLoadingBalance ? <Loader2 className="h-6 w-6 animate-spin text-success" /> : <Wallet className="h-6 w-6 text-success" />}
+          value={(isAllBranches ? isLoadingConsolidated : isLoadingBalance) ? "..." : formatCurrency(balanceValue)}
+          icon={(isAllBranches ? isLoadingConsolidated : isLoadingBalance) ? <Loader2 className="h-6 w-6 animate-spin text-success" /> : <Wallet className="h-6 w-6 text-success" />}
           iconBgClass="bg-success/10"
         />
         <KPICard
@@ -179,6 +204,71 @@ export default function Dashboard() {
           iconBgClass="bg-destructive/10"
         />
       </div>
+
+      {isAllBranches && (
+        <div className="kpi-card animate-fade-in mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Consolidado por Sucursal</h3>
+              <p className="text-sm text-muted-foreground">Totales del día</p>
+            </div>
+          </div>
+          {isLoadingConsolidated ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+            </div>
+          ) : consolidatedBranches.length ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Ingresos</p>
+                  <p className="text-lg font-semibold text-foreground">{formatCurrency(consolidatedTotals?.income ?? 0)}</p>
+                </div>
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Egresos</p>
+                  <p className="text-lg font-semibold text-foreground">{formatCurrency(consolidatedTotals?.expenses ?? 0)}</p>
+                </div>
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className="text-lg font-semibold text-foreground">{formatCurrency(consolidatedTotals?.netBalance ?? 0)}</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="table-header text-left py-2 px-2">Sucursal</th>
+                      <th className="table-header text-right py-2 px-2">Ingresos</th>
+                      <th className="table-header text-right py-2 px-2">Egresos</th>
+                      <th className="table-header text-right py-2 px-2">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consolidatedBranches.map((branch) => (
+                      <tr key={branch.branchId} className="border-b border-border/50">
+                        <td className="py-2 px-2 text-sm text-foreground">
+                          {branch.branchName}
+                        </td>
+                        <td className="py-2 px-2 text-sm text-right text-foreground">
+                          {formatCurrency(branch.income)}
+                        </td>
+                        <td className="py-2 px-2 text-sm text-right text-foreground">
+                          {formatCurrency(branch.expenses)}
+                        </td>
+                        <td className="py-2 px-2 text-sm text-right text-foreground">
+                          {formatCurrency(branch.netBalance)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin datos consolidados.</p>
+          )}
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
