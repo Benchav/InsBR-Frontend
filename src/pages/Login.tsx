@@ -31,11 +31,6 @@ export default function Login() {
     }
   };
 
-  // Demo login for testing
-  const handleDemoLogin = () => {
-    setUsername('admin');
-    setPassword('admin123');
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,15 +55,15 @@ export default function Login() {
               <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  Acceso por roles y sucursales
+                  Panel principal unificado
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  Reportes listos para auditoría
+                  Sucursal Diriamba
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  Integración con API en tiempo real
+                  Sucursal Jinotepe
                 </div>
               </div>
             </div>
@@ -131,17 +126,17 @@ export default function Login() {
                 </form>
 
                 <div className="mt-6 pt-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground text-center mb-2">
-                    ¿Primera vez? Usa las credenciales de demo:
+                  <p className="text-xs text-muted-foreground text-center">
+                    Realizado por{' '}
+                    <a
+                      href="https://joshuachavl.vercel.app/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Joshua Chávez
+                    </a>
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleDemoLogin}
-                  >
-                    Cargar credenciales demo
-                  </Button>
                 </div>
               </div>
             </div>
