@@ -14,6 +14,8 @@ export interface CashMovementPayload {
   amount: number;
   description: string;
   category: 'EXPENSE' | 'ADJUSTMENT';
+  paymentMethod: 'CASH' | 'TRANSFER' | 'CHECK';
+  notes?: string;
 }
 
 export const cashApi = {
@@ -42,7 +44,7 @@ export const cashApi = {
   },
 
   createMovement: async (payload: CashMovementPayload): Promise<CashMovement> => {
-    const { data } = await apiClient.post('/api/cash', payload);
+    const { data } = await apiClient.post('/api/cash/movements', payload);
     return data;
   },
 };

@@ -47,6 +47,8 @@ export default function Caja() {
   const [movementCategory, setMovementCategory] = useState<'EXPENSE' | 'ADJUSTMENT'>('ADJUSTMENT');
   const [movementAmount, setMovementAmount] = useState('');
   const [movementDescription, setMovementDescription] = useState('');
+  const [movementPaymentMethod, setMovementPaymentMethod] = useState<'CASH' | 'TRANSFER' | 'CHECK'>('CASH');
+  const [movementNotes, setMovementNotes] = useState('');
   const queryClient = useQueryClient();
 
   const { data: balance } = useQuery({
@@ -81,6 +83,8 @@ export default function Caja() {
       setMovementDescription('');
       setMovementType('INCOME');
       setMovementCategory('ADJUSTMENT');
+      setMovementPaymentMethod('CASH');
+      setMovementNotes('');
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
       queryClient.invalidateQueries({ queryKey: ['cash-balance'] });
       queryClient.invalidateQueries({ queryKey: ['cash-daily-revenue'] });
@@ -103,6 +107,8 @@ export default function Caja() {
       amount: toCents(amountValue),
       description: movementDescription.trim(),
       category: movementCategory,
+      paymentMethod: movementPaymentMethod,
+      notes: movementNotes.trim() || undefined,
     });
   };
 
@@ -289,11 +295,32 @@ export default function Caja() {
               />
             </div>
             <div className="grid gap-2">
+              <Label>Método de pago</Label>
+              <Select value={movementPaymentMethod} onValueChange={(val) => setMovementPaymentMethod(val as 'CASH' | 'TRANSFER' | 'CHECK')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CASH">Efectivo</SelectItem>
+                  <SelectItem value="TRANSFER">Transferencia</SelectItem>
+                  <SelectItem value="CHECK">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
               <Label>Descripción</Label>
               <Input
                 value={movementDescription}
                 onChange={(event) => setMovementDescription(event.target.value)}
                 placeholder="Detalle del movimiento"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Notas</Label>
+              <Input
+                value={movementNotes}
+                onChange={(event) => setMovementNotes(event.target.value)}
+                placeholder="Opcional"
               />
             </div>
           </div>
