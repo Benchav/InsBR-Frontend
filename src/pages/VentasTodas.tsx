@@ -51,7 +51,8 @@ export default function VentasTodas() {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
     },
     onError: (error) => {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorData = (error as { response?: { data?: { message?: string; error?: string } }; message?: string })?.response?.data;
+      const message = errorData?.message || errorData?.error || (error as { message?: string })?.message;
       toast.error(message || 'No se pudo cancelar la venta');
     }
   });
@@ -67,7 +68,21 @@ export default function VentasTodas() {
     }
   };
 
-  const handleCancelSale = (saleId: string) => {
+  const isSameDay = (value: string) => {
+    const date = new Date(value);
+    const now = new Date();
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+    );
+  };
+
+  const handleCancelSale = (saleId: string, createdAt: string) => {
+    if (!isSameDay(createdAt)) {
+      toast.error('Solo se pueden cancelar ventas del día');
+      return;
+    }
     cancelSaleMutation.mutate(saleId);
   };
 
@@ -87,6 +102,11 @@ export default function VentasTodas() {
 
   const getBranchLabel = (branchId: string) => {
     return BRANCHES.find((b) => b.id === branchId)?.shortName || branchId;
+  };
+
+  const canCancelSale = (sale: typeof sales[number]) => {
+    if ((sale.status ?? 'ACTIVE') !== 'ACTIVE') return false;
+    return isSameDay(sale.createdAt);
   };
 
   return (
@@ -228,7 +248,7 @@ export default function VentasTodas() {
                             variant="destructive"
                             size="sm"
                             onClick={() => setCancelTarget(sale.id)}
-                            disabled={(sale.status ?? 'ACTIVE') !== 'ACTIVE' || cancelSaleMutation.isPending}
+                            disabled={!canCancelSale(sale) || cancelSaleMutation.isPending}
                           >
                             <Ban className="mr-2 h-4 w-4" />
                             Cancelar
@@ -255,7 +275,10 @@ export default function VentasTodas() {
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => cancelTarget && handleCancelSale(cancelTarget)}
+              onClick={() => {
+                const sale = sales.find((item) => item.id === cancelTarget);
+                if (sale) handleCancelSale(sale.id, sale.createdAt);
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Confirmar cancelación

@@ -67,7 +67,7 @@ export const creditsApi = {
   },
 
   getPaymentHistory: async (creditAccountId: string): Promise<unknown[]> => {
-    const { data } = await apiClient.get(`/api/credits/${creditAccountId}/history`);
+    const { data } = await apiClient.get(`/api/credits/${creditAccountId}/payments`);
     return data;
   },
 
