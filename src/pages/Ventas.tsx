@@ -43,6 +43,7 @@ const categories = ['Todos', 'Fertilizantes', 'Semillas', 'Herbicidas', 'Fungici
 export default function Ventas() {
   const { currentBranchId, getCurrentBranch } = useBranchStore();
   const currentBranch = getCurrentBranch();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const queryClient = useQueryClient();
 
   // Queries
@@ -52,13 +53,13 @@ export default function Ventas() {
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: customersApi.getAll,
+    queryKey: ['customers', branchId],
+    queryFn: () => customersApi.getAll(branchId ? { branchId } : undefined),
   });
 
   const { data: stocks = [], isLoading: isLoadingStocks } = useQuery({
-    queryKey: ['stocks'],
-    queryFn: stockApi.getMyBranchStock,
+    queryKey: ['stocks', branchId],
+    queryFn: () => stockApi.getMyBranchStock(branchId ? { branchId } : undefined),
   });
 
   // State

@@ -32,13 +32,14 @@ import {
 
 export default function VentasTodas() {
   const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
   const { data: sales = [], isLoading } = useQuery({
-    queryKey: ['sales-all'],
-    queryFn: () => salesApi.getAll(),
+    queryKey: ['sales-all', branchId],
+    queryFn: () => salesApi.getAll(branchId ? { branchId } : undefined),
   });
 
   const cancelSaleMutation = useMutation({

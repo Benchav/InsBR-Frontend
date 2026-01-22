@@ -28,8 +28,10 @@ export interface StockSummary {
 }
 
 export const stockApi = {
-  getMyBranchStock: async (): Promise<Stock[]> => {
-    const { data } = await apiClient.get('/api/stock');
+  getMyBranchStock: async (filters?: { branchId?: string }): Promise<Stock[]> => {
+    const { data } = await apiClient.get('/api/stock', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 

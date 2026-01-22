@@ -24,10 +24,11 @@ export const cashApi = {
     return data;
   },
 
-  getMovements: async (filters?: { startDate?: string; endDate?: string }): Promise<CashMovement[]> => {
+  getMovements: async (filters?: { startDate?: string; endDate?: string; branchId?: string }): Promise<CashMovement[]> => {
     const params = new URLSearchParams();
     if (filters?.startDate) params.append('startDate', filters.startDate);
     if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.branchId) params.append('branchId', filters.branchId);
 
     const { data } = await apiClient.get(`/api/cash/movements?${params.toString()}`);
     return data;

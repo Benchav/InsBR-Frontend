@@ -31,6 +31,7 @@ import {
 
 export default function Inventario() {
   const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -69,8 +70,8 @@ export default function Inventario() {
   });
 
   const { data: stocks = [], isLoading: isLoadingStocks } = useQuery({
-    queryKey: ['stocks'],
-    queryFn: () => stockApi.getMyBranchStock(),
+    queryKey: ['stocks', branchId],
+    queryFn: () => stockApi.getMyBranchStock(branchId ? { branchId } : undefined),
   });
 
   // Mutations

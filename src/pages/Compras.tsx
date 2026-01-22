@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 
 export default function Compras() {
   const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
@@ -43,8 +44,8 @@ export default function Compras() {
   const [unitCost, setUnitCost] = useState(0);
 
   const { data: purchases = [], isLoading } = useQuery({
-    queryKey: ['purchases'],
-    queryFn: () => purchasesApi.getAll(),
+    queryKey: ['purchases', branchId],
+    queryFn: () => purchasesApi.getAll(branchId ? { branchId } : undefined),
   });
 
   const { data: products = [] } = useQuery({

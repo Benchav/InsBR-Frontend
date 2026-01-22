@@ -27,8 +27,10 @@ export interface CreateTransferDto {
 }
 
 export const transfersApi = {
-  getAll: async (): Promise<Transfer[]> => {
-    const { data } = await apiClient.get('/api/transfers');
+  getAll: async (filters?: { branchId?: string }): Promise<Transfer[]> => {
+    const { data } = await apiClient.get('/api/transfers', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 

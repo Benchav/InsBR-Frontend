@@ -45,6 +45,7 @@ const getStatusConfig = (status: string) => {
 
 export default function Transferencias() {
   const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,8 +62,8 @@ export default function Transferencias() {
 
   // Data Fetching
   const { data: transfers = [], isLoading } = useQuery({
-    queryKey: ['transfers'],
-    queryFn: () => transfersApi.getAll()
+    queryKey: ['transfers', branchId],
+    queryFn: () => transfersApi.getAll(branchId ? { branchId } : undefined)
   });
 
   const { data: products = [] } = useQuery({

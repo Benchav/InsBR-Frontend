@@ -32,6 +32,7 @@ import { Search, Plus, Pencil, Trash2, Loader2, UserCircle2 } from 'lucide-react
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi, Customer, CreateCustomerDto } from '@/api/customers.api';
 import { toast } from 'sonner';
+import { useBranchStore } from '@/stores/branchStore';
 
 const defaultForm: CreateCustomerDto = {
   name: '',
@@ -46,6 +47,8 @@ const defaultForm: CreateCustomerDto = {
 };
 
 export default function Clientes() {
+  const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -53,8 +56,8 @@ export default function Clientes() {
   const [formData, setFormData] = useState<CreateCustomerDto>(defaultForm);
 
   const { data: customers = [], isLoading } = useQuery({
-    queryKey: ['customers'],
-    queryFn: customersApi.getAll,
+    queryKey: ['customers', branchId],
+    queryFn: () => customersApi.getAll(branchId ? { branchId } : undefined),
   });
 
   const createMutation = useMutation({

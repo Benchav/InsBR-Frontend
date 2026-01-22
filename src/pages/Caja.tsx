@@ -33,10 +33,13 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranchStore } from '@/stores/branchStore';
 
 export default function Caja() {
   const { user } = useAuth();
   const isReadOnly = user?.role === 'CAJERO';
+  const { currentBranchId } = useBranchStore();
+  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -47,24 +50,25 @@ export default function Caja() {
   const queryClient = useQueryClient();
 
   const { data: balance } = useQuery({
-    queryKey: ['cash-balance'],
-    queryFn: () => cashApi.getBalance(),
+    queryKey: ['cash-balance', branchId],
+    queryFn: () => cashApi.getBalance(branchId ? { branchId } : undefined),
   });
 
   const { data: dailyRevenue } = useQuery({
-    queryKey: ['cash-daily-revenue'],
-    queryFn: () => cashApi.getDailyRevenue(),
+    queryKey: ['cash-daily-revenue', branchId],
+    queryFn: () => cashApi.getDailyRevenue(branchId ? { branchId } : undefined),
   });
 
   const {
     data: movements = [],
     isLoading: isLoadingMovements,
   } = useQuery({
-    queryKey: ['cash-movements', startDate, endDate],
+    queryKey: ['cash-movements', branchId, startDate, endDate],
     queryFn: () =>
       cashApi.getMovements({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        branchId,
       }),
   });
 

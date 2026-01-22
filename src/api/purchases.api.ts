@@ -45,8 +45,10 @@ export interface CreatePurchaseDto {
 }
 
 export const purchasesApi = {
-  getAll: async (): Promise<Purchase[]> => {
-    const { data } = await apiClient.get('/api/purchases');
+  getAll: async (filters?: { branchId?: string }): Promise<Purchase[]> => {
+    const { data } = await apiClient.get('/api/purchases', {
+      params: filters?.branchId ? { branchId: filters.branchId } : undefined,
+    });
     return data;
   },
 
