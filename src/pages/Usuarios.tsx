@@ -97,6 +97,32 @@ export default function Usuarios() {
     queryFn: authApi.getAllUsers,
   });
 
+  // Mutations
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      authApi.updateUser(id, { isActive }),
+    onSuccess: () => {
+      toast.success('Estado actualizado');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(getApiErrorMessage(error));
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => authApi.deleteUser(id),
+    onSuccess: () => {
+      toast.success('Usuario eliminado');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(getApiErrorMessage(error));
+    }
+  });
+
   const { data: branches = [] } = useQuery({
     queryKey: ['branches'],
     queryFn: branchesApi.getAll,
@@ -210,7 +236,28 @@ export default function Usuarios() {
     });
   };
 
-  const getApiErrorMessage = (error: unknown) => {
+  const handleDeactivate = (user: User) => {
+    if (!confirm(`¿Desactivar usuario ${user.username}?`)) return;
+    const id = user.userId || user.id;
+    toggleActiveMutation.mutate({ id, isActive: false });
+  };
+
+  const handleReactivate = (user: User) => {
+    const id = user.userId || user.id;
+    toggleActiveMutation.mutate({ id, isActive: true });
+  };
+
+  const handleDelete = (user: User) => {
+    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE a ${user.username}?
+
+Esta acción NO se puede deshacer.`)) return;
+    const second = prompt('Escribe "ELIMINAR" para confirmar');
+    if (second !== 'ELIMINAR') return;
+    const id = user.userId || user.id;
+    deleteUserMutation.mutate(id);
+  };
+
+  function getApiErrorMessage(error: unknown) {
     const response = (error as { response?: { status?: number; data?: { error?: string; message?: string } } })?.response;
     const status = response?.status;
     const message = response?.data?.message || response?.data?.error;
@@ -221,7 +268,7 @@ export default function Usuarios() {
     if (status === 409) return 'El nombre de usuario ya existe.';
     if (status === 422) return 'Datos inválidos. Verifica los campos.';
     return message || 'Ocurrió un error inesperado.';
-  };
+  }
 
   const safeUsers = Array.isArray(users) ? users : [];
 
@@ -555,9 +602,19 @@ export default function Usuarios() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Ver Historial</DropdownMenuItem>
+                      {user.isActive ? (
+                        <DropdownMenuItem onClick={() => handleDeactivate(user)}>
+                          <Key className="h-4 w-4 mr-2" />
+                          Desactivar usuario
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => handleReactivate(user)}>
+                          <Key className="h-4 w-4 mr-2" />
+                          Reactivar usuario
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Eliminar Usuario
                       </DropdownMenuItem>

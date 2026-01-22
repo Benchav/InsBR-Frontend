@@ -80,6 +80,11 @@ export const authApi = {
     return data;
   },
 
+  // Delete user (Admin only)
+  deleteUser: async (id: string): Promise<void> => {
+    await apiClient.delete(`/api/auth/users/${id}`);
+  },
+
   // Create user (needed for "Nuevo Usuario")
   createUser: async (user: any): Promise<User> => {
     const { data } = await apiClient.post('/api/auth/register', user);
