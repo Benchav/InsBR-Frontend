@@ -53,7 +53,7 @@ export default function Transferencias() {
 
   // Create Transfer State
   const [newTransfer, setNewTransfer] = useState<Partial<CreateTransferDto>>({
-    toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-DIR-002' : 'BRANCH-DIR-001', // Default opposite
+    toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-JIN-001' : 'BRANCH-DIR-001', // Default opposite
     items: [],
     notes: ''
   });
@@ -77,7 +77,7 @@ export default function Transferencias() {
     onSuccess: () => {
       toast.success('Solicitud de transferencia creada');
       setIsDialogOpen(false);
-      setNewTransfer({ items: [], notes: '', toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-DIR-002' : 'BRANCH-DIR-001' });
+      setNewTransfer({ items: [], notes: '', toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-JIN-001' : 'BRANCH-DIR-001' });
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
     },
     onError: () => toast.error('Error al crear transferencia')
@@ -185,7 +185,7 @@ export default function Transferencias() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
-                      <SelectItem value="BRANCH-DIR-002">Jinotepe</SelectItem>
+                      <SelectItem value="BRANCH-JIN-001">Jinotepe</SelectItem>
                       <SelectItem value="ALL">Global</SelectItem>
                     </SelectContent>
                   </Select>
@@ -202,7 +202,7 @@ export default function Transferencias() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BRANCH-DIR-001" disabled={currentBranchId === 'BRANCH-DIR-001'}>Diriamba</SelectItem>
-                      <SelectItem value="BRANCH-DIR-002" disabled={currentBranchId === 'BRANCH-DIR-002'}>Jinotepe</SelectItem>
+                      <SelectItem value="BRANCH-JIN-001" disabled={currentBranchId === 'BRANCH-JIN-001'}>Jinotepe</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

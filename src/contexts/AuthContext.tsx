@@ -21,10 +21,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const mapUserBranchId = (branchId?: string): BranchId => {
     if (!branchId) return 'BRANCH-DIR-001';
     if (branchId === 'BRANCH-DIR-001') return 'BRANCH-DIR-001';
-    if (branchId === 'BRANCH-DIR-002') return 'BRANCH-DIR-002';
+    if (branchId === 'BRANCH-JIN-001') return 'BRANCH-JIN-001';
     const normalized = branchId.toLowerCase();
     if (normalized.includes('dir')) return 'BRANCH-DIR-001';
-    if (normalized.includes('jin')) return 'BRANCH-DIR-002';
+    if (normalized.includes('jin')) return 'BRANCH-JIN-001';
     return 'BRANCH-DIR-001';
   };
 

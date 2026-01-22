@@ -306,7 +306,7 @@ export default function Ventas() {
 
                     // Specific stocks for columns
                     const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
-                    const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-DIR-002');
+                    const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-JIN-001');
 
                     const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
                     const isLowStock = displayStock < 10;

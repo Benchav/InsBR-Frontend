@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type BranchId = 'ALL' | 'BRANCH-DIR-001' | 'BRANCH-DIR-002';
+export type BranchId = 'ALL' | 'BRANCH-DIR-001' | 'BRANCH-JIN-001';
 
 export interface Branch {
   id: BranchId;
@@ -12,7 +12,7 @@ export interface Branch {
 export const BRANCHES: Branch[] = [
   { id: 'ALL', name: 'Todas las Sucursales', shortName: 'Todas' },
   { id: 'BRANCH-DIR-001', name: 'Sucursal Diriamba', shortName: 'Diriamba' },
-  { id: 'BRANCH-DIR-002', name: 'Sucursal Jinotepe', shortName: 'Jinotepe' },
+  { id: 'BRANCH-JIN-001', name: 'Sucursal Jinotepe', shortName: 'Jinotepe' },
 ];
 
 interface BranchState {

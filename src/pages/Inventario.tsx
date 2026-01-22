@@ -210,7 +210,7 @@ export default function Inventario() {
 
   const isLoading = isLoadingProducts || isLoadingStocks;
   const showDiriamba = currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-001';
-  const showJinotepe = currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-002';
+  const showJinotepe = currentBranchId === 'ALL' || currentBranchId === 'BRANCH-JIN-001';
 
   return (
     <DashboardLayout>
@@ -407,7 +407,7 @@ export default function Inventario() {
               <tbody>
                 {filteredInventory.map((item) => {
                   const stockDiriamba = getStockForBranch(item.id, 'BRANCH-DIR-001');
-                  const stockJinotepe = getStockForBranch(item.id, 'BRANCH-DIR-002');
+                  const stockJinotepe = getStockForBranch(item.id, 'BRANCH-JIN-001');
                   const productStocks = getProductStocks(item.id);
                   const total = productStocks.reduce((sum, s) => sum + s.quantity, 0);
 
@@ -430,7 +430,7 @@ export default function Inventario() {
 
                       {showJinotepe && (
                         <td className="py-4 px-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-DIR-002')}
+                          onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-JIN-001')}
                           title="Clic para ajustar stock Jinotepe"
                         >
                           <span className={cn('font-semibold', stockJinotepe < 10 ? 'text-destructive' : 'text-foreground')}>

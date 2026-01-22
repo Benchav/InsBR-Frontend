@@ -148,7 +148,7 @@ export default function Reportes() {
       if (!bucket) return;
       bucket.total += sale.total;
       if (sale.branchId === 'BRANCH-DIR-001') bucket.diriamba += sale.total;
-      if (sale.branchId === 'BRANCH-DIR-002') bucket.jinotepe += sale.total;
+      if (sale.branchId === 'BRANCH-JIN-001') bucket.jinotepe += sale.total;
     });
 
     return months;

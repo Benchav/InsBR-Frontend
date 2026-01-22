@@ -41,7 +41,7 @@ export function RevenueChart() {
             <span className="text-sm text-muted-foreground">Diriamba</span>
           </div>
         )}
-        {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-002') && (
+        {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-JIN-001') && (
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-warning" />
             <span className="text-sm text-muted-foreground">Jinotepe</span>
@@ -81,7 +81,7 @@ export function RevenueChart() {
                 maxBarSize={40}
               />
             )}
-            {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-DIR-002') && (
+            {(currentBranchId === 'ALL' || currentBranchId === 'BRANCH-JIN-001') && (
               <Bar
                 dataKey="Jinotepe"
                 fill="hsl(var(--warning))"

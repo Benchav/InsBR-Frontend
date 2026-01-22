@@ -11,15 +11,13 @@ import {
   Shield,
   ShoppingCart,
   MoreHorizontal,
-  Mail,
-  Phone,
   MapPin,
   Edit,
   Trash2,
   Key,
   Loader2
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +44,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi, User, UserRole } from '@/api/auth.api';
+import { branchesApi } from '@/api/branches.api';
+import { BRANCHES } from '@/stores/branchStore';
 import { toast } from 'sonner';
 
 const getRoleConfig = (role: string) => {
@@ -74,8 +74,6 @@ export default function Usuarios() {
   const [createForm, setCreateForm] = useState({
     name: '',
     username: '',
-    email: '',
-    phone: '',
     role: 'CAJERO' as UserRole,
     branchId: 'BRANCH-DIR-001',
     password: '',
@@ -84,6 +82,7 @@ export default function Usuarios() {
 
   const [editForm, setEditForm] = useState({
     name: '',
+    username: '',
     role: 'CAJERO' as UserRole,
     isActive: true,
     password: '',
@@ -98,6 +97,41 @@ export default function Usuarios() {
     queryFn: authApi.getAllUsers,
   });
 
+  const { data: branches = [] } = useQuery({
+    queryKey: ['branches'],
+    queryFn: branchesApi.getAll,
+  });
+
+  const branchOptions = useMemo(() => {
+    const base = branches.length
+      ? branches
+      : BRANCHES.filter((branch) => branch.id !== 'ALL').map((branch) => ({
+        id: branch.id,
+        name: branch.name,
+        code: branch.shortName,
+      }));
+
+    const map = new Map<string, { id: string; name: string; code?: string }>();
+    base.forEach((branch) => map.set(branch.id, branch));
+
+    // Ensure edited user branch exists in options even if backend returns unexpected IDs
+    if (editingUser?.branchId && !map.has(editingUser.branchId)) {
+      map.set(editingUser.branchId, {
+        id: editingUser.branchId,
+        name: editingUser.branchId,
+      });
+    }
+
+    return Array.from(map.values());
+  }, [branches, editingUser]);
+
+  useEffect(() => {
+    if (!branchOptions.length) return;
+    if (!createForm.branchId) {
+      setCreateForm((prev) => ({ ...prev, branchId: branchOptions[0].id }));
+    }
+  }, [branchOptions, createForm.branchId]);
+
   // Mutations
   const createUserMutation = useMutation({
     mutationFn: authApi.createUser,
@@ -107,8 +141,6 @@ export default function Usuarios() {
       setCreateForm({
         name: '',
         username: '',
-        email: '',
-        phone: '',
         role: 'CAJERO',
         branchId: 'BRANCH-DIR-001',
         password: '',
@@ -118,7 +150,7 @@ export default function Usuarios() {
     },
     onError: (error) => {
       console.error(error);
-      toast.error('Error al crear usuario. Verifique los datos.');
+      toast.error(getApiErrorMessage(error));
     }
   });
 
@@ -132,7 +164,7 @@ export default function Usuarios() {
     },
     onError: (error) => {
       console.error(error);
-      toast.error('Error al actualizar usuario');
+      toast.error(getApiErrorMessage(error));
     }
   });
 
@@ -141,6 +173,7 @@ export default function Usuarios() {
     setEditingUser(user);
     setEditForm({
       name: user.name,
+      username: user.username,
       role: user.role,
       isActive: user.isActive ?? true,
       password: '',
@@ -150,18 +183,49 @@ export default function Usuarios() {
   };
 
   const handleCreateUser = () => {
+    if (!createForm.username.trim()) {
+      toast.error('El nombre de usuario es obligatorio');
+      return;
+    }
+    if (createForm.password.trim().length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
     createUserMutation.mutate(createForm);
   };
 
   const handleUpdateUser = () => {
     if (!editingUser) return;
+    if (!editForm.username.trim()) {
+      toast.error('El nombre de usuario es obligatorio');
+      return;
+    }
+    if (editForm.password && editForm.password.trim().length > 0 && editForm.password.trim().length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
     updateUserMutation.mutate({
       id: editingUser.userId || editingUser.id,
       data: editForm
     });
   };
 
-  const filteredUsers = users.filter((u) => {
+  const getApiErrorMessage = (error: unknown) => {
+    const response = (error as { response?: { status?: number; data?: { error?: string; message?: string } } })?.response;
+    const status = response?.status;
+    const message = response?.data?.message || response?.data?.error;
+
+    if (status === 401) return 'Sesión expirada. Inicia sesión nuevamente.';
+    if (status === 403) return 'No tienes permisos para realizar esta acción.';
+    if (status === 404) return 'Usuario no encontrado.';
+    if (status === 409) return 'El nombre de usuario ya existe.';
+    if (status === 422) return 'Datos inválidos. Verifica los campos.';
+    return message || 'Ocurrió un error inesperado.';
+  };
+
+  const safeUsers = Array.isArray(users) ? users : [];
+
+  const filteredUsers = safeUsers.filter((u) => {
     const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       u.username.toLowerCase().includes(searchTerm.toLowerCase());
@@ -169,9 +233,9 @@ export default function Usuarios() {
     return matchesSearch && matchesRole;
   });
 
-  const adminCount = users.filter(u => u.role === 'ADMIN').length;
-  const managerCount = users.filter(u => u.role === 'GERENTE').length;
-  const cashierCount = users.filter(u => u.role === 'CAJERO').length;
+  const adminCount = safeUsers.filter(u => u.role === 'ADMIN').length;
+  const managerCount = safeUsers.filter(u => u.role === 'GERENTE').length;
+  const cashierCount = safeUsers.filter(u => u.role === 'CAJERO').length;
 
   return (
     <DashboardLayout>
@@ -209,10 +273,6 @@ export default function Usuarios() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Correo Electrónico (Opcional)</Label>
-                <Input value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} type="email" placeholder="correo@ejemplo.com" />
-              </div>
-              <div className="space-y-2">
                 <Label>Contraseña</Label>
                 <Input value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} type="password" placeholder="••••••••" />
               </div>
@@ -233,8 +293,11 @@ export default function Usuarios() {
                   <Select value={createForm.branchId} onValueChange={(val) => setCreateForm({ ...createForm, branchId: val })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
-                      <SelectItem value="BRANCH-DIR-002">Jinotepe</SelectItem>
+                      {branchOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}{branch.code ? ` (${branch.code})` : ''}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -261,6 +324,13 @@ export default function Usuarios() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre de Usuario</Label>
+              <Input
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Nombre Completo</Label>
               <Input
@@ -296,8 +366,11 @@ export default function Usuarios() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
-                    <SelectItem value="BRANCH-DIR-002">Jinotepe</SelectItem>
+                    {branchOptions.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}{branch.code ? ` (${branch.code})` : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -344,7 +417,7 @@ export default function Usuarios() {
               <UserCog className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{users.length}</p>
+              <p className="text-2xl font-bold">{safeUsers.length}</p>
               <p className="text-sm text-muted-foreground">Total Usuarios</p>
             </div>
           </div>
@@ -453,19 +526,11 @@ export default function Usuarios() {
 
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span className="truncate">{user.email || 'Sin correo'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{user.phone || 'Sin teléfono'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     <Badge variant="outline" className={cn(
                       'branch-badge',
                       user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
-                        user.branchId === 'BRANCH-DIR-002' ? 'branch-jinotepe' : ''
+                        user.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
                     )}>
                       {user.branchId || 'Sin Sucursal'}
                     </Badge>
@@ -506,7 +571,7 @@ export default function Usuarios() {
       )}
 
       <div className="mt-6 text-sm text-muted-foreground">
-        Mostrando {filteredUsers.length} de {users.length} usuarios
+        Mostrando {filteredUsers.length} de {safeUsers.length} usuarios
       </div>
     </DashboardLayout>
   );

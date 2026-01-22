@@ -382,7 +382,7 @@ export default function Compras() {
                       <span className={cn(
                         'branch-badge',
                         purchase.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
-                          purchase.branchId === 'BRANCH-DIR-002' ? 'branch-jinotepe' : ''
+                          purchase.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
                       )}>
                         {purchase.branchId}
                       </span>

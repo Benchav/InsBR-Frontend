@@ -294,7 +294,7 @@ export default function Dashboard() {
                             'branch-badge',
                             sale.branchId === 'BRANCH-DIR-001'
                               ? 'branch-diriamba'
-                              : sale.branchId === 'BRANCH-DIR-002'
+                              : sale.branchId === 'BRANCH-JIN-001'
                                 ? 'branch-jinotepe'
                                 : ''
                           )}

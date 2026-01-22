@@ -24,7 +24,7 @@ export function RecentTransactions() {
 
   const branchNameById: Record<string, Transaction['branch']> = {
     'BRANCH-DIR-001': 'Diriamba',
-    'BRANCH-DIR-002': 'Jinotepe',
+    'BRANCH-JIN-001': 'Jinotepe',
   };
 
   const filteredTransactions = transactions.filter((t) => {

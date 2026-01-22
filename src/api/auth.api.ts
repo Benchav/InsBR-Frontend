@@ -30,6 +30,7 @@ export interface LoginResponse {
 
 export interface UpdateUserDto {
   name?: string;
+  username?: string;
   role?: UserRole;
   isActive?: boolean;
   password?: string;
@@ -54,13 +55,17 @@ export const authApi = {
   // Get all users (Admin only)
   getAllUsers: async (): Promise<User[]> => {
     const { data } = await apiClient.get('/api/auth/users');
-    return data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray((data as { users?: User[] })?.users)) return (data as { users?: User[] }).users as User[];
+    if (Array.isArray((data as { data?: User[] })?.data)) return (data as { data?: User[] }).data as User[];
+    return [];
   },
 
   // Update user
   updateUser: async (id: string, updates: UpdateUserDto): Promise<User> => {
     const payload: any = {
       name: updates.name,
+      username: updates.username,
       role: updates.role,
       isActive: updates.isActive,
       branchId: updates.branchId,

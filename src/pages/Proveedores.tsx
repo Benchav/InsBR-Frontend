@@ -78,8 +78,7 @@ export default function Proveedores() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CreateSupplierDto }) =>
-      suppliersApi.update(id, data),
+    mutationFn: (id: string) => suppliersApi.delete(id),
     onSuccess: () => {
       toast.success('Proveedor eliminado correctamente');
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
@@ -120,20 +119,7 @@ export default function Proveedores() {
 
   const handleDelete = (supplier: Supplier) => {
     if (confirm('¿Deseas eliminar este proveedor?')) {
-      deleteMutation.mutate({
-        id: supplier.id,
-        data: {
-          name: supplier.name,
-          contactName: supplier.contactName,
-          phone: supplier.phone,
-          email: supplier.email,
-          address: supplier.address,
-          taxId: supplier.taxId,
-          creditDays: supplier.creditDays,
-          creditLimit: supplier.creditLimit,
-          isActive: false,
-        },
-      });
+      deleteMutation.mutate(supplier.id);
     }
   };
 
