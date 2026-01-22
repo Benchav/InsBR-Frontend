@@ -46,20 +46,61 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/api/client';
+import { toast } from 'sonner';
 
 const reportTypes = [
-  { id: 'ventas', name: 'Reporte de Ventas', icon: ShoppingCart, description: 'Análisis detallado de ventas por período' },
-  { id: 'inventario', name: 'Reporte de Inventario', icon: Package, description: 'Estado actual del stock y movimientos' },
-  { id: 'financiero', name: 'Reporte Financiero', icon: DollarSign, description: 'Ingresos, gastos y utilidades' },
-  { id: 'clientes', name: 'Reporte de Clientes', icon: Users, description: 'Análisis de cartera de clientes' },
+  {
+    id: 'sales',
+    name: 'Reporte de Ventas',
+    icon: ShoppingCart,
+    description: 'Análisis detallado de ventas por período',
+    endpoint: '/api/reports/sales/excel',
+    roles: ['ADMIN', 'GERENTE'] as const,
+    color: 'blue',
+    needsRange: true,
+  },
+  {
+    id: 'cash',
+    name: 'Reporte Financiero',
+    icon: DollarSign,
+    description: 'Ingresos, gastos y utilidades',
+    endpoint: '/api/reports/cash/excel',
+    roles: ['ADMIN', 'GERENTE'] as const,
+    color: 'green',
+    needsRange: true,
+  },
+  {
+    id: 'inventory',
+    name: 'Reporte de Inventario',
+    icon: Package,
+    description: 'Estado actual del stock por sucursal',
+    endpoint: '/api/reports/inventory/excel',
+    roles: ['ADMIN'] as const,
+    color: 'orange',
+    needsRange: false,
+  },
+  {
+    id: 'clients',
+    name: 'Reporte de Clientes',
+    icon: Users,
+    description: 'Análisis de cartera de clientes',
+    endpoint: '/api/reports/clients/excel',
+    roles: ['ADMIN'] as const,
+    color: 'purple',
+    needsRange: false,
+  },
 ];
 
 export default function Reportes() {
+  const { user } = useAuth();
   const { currentBranchId, getCurrentBranch } = useBranchStore();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const isAllBranches = currentBranchId === 'ALL';
   const currentBranch = getCurrentBranch();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
 
   const { data: sales = [] } = useQuery({
     queryKey: ['sales-report', branchId],
@@ -238,6 +279,61 @@ export default function Reportes() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
   }, [periodSales, previousPeriodSales]);
+
+  const toDateInput = (date: Date) => date.toISOString().split('T')[0];
+
+  const handleDownloadReport = async (reportId: string) => {
+    const report = reportTypes.find((item) => item.id === reportId);
+    if (!report) return;
+    if (!user?.role || !report.roles.includes(user.role)) {
+      toast.error('No tienes permisos para generar este reporte');
+      return;
+    }
+
+    setDownloadingReportId(reportId);
+    try {
+      const params = report.needsRange ? (() => {
+        const { start, end } = getPeriodRange(selectedPeriod);
+        return { from: toDateInput(start), to: toDateInput(end) };
+      })() : undefined;
+
+      const response = await apiClient.get(report.endpoint, {
+        responseType: 'blob',
+        params,
+      });
+
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filenameDate = toDateInput(new Date());
+      const safeName = report.name.replace(/\s+/g, '_');
+      link.href = url;
+      link.setAttribute('download', `${safeName}_${filenameDate}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Reporte descargado');
+    } catch (error: unknown) {
+      toast.error('Error al generar reporte');
+    } finally {
+      setDownloadingReportId(null);
+    }
+  };
+
+  const reportColorClasses = {
+    blue: 'bg-blue-500 text-white hover:bg-blue-600',
+    green: 'bg-success text-success-foreground hover:bg-success/90',
+    orange: 'bg-warning text-warning-foreground hover:bg-warning/90',
+    purple: 'bg-purple-500 text-white hover:bg-purple-600',
+  } as const;
+
+  const reportIconClasses = {
+    blue: 'bg-blue-500/10 text-blue-600',
+    green: 'bg-success/10 text-success',
+    orange: 'bg-warning/10 text-warning',
+    purple: 'bg-purple-500/10 text-purple-600',
+  } as const;
 
   return (
     <DashboardLayout>
@@ -509,19 +605,38 @@ export default function Reportes() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {reportTypes.map((report) => {
               const Icon = report.icon;
+              const isAllowed = !!user?.role && report.roles.includes(user.role);
+              const isDownloading = downloadingReportId === report.id;
               return (
                 <button
                   key={report.id}
-                  className="flex items-start gap-3 p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all text-left group"
+                  className={cn(
+                    'flex flex-col gap-3 p-4 rounded-xl border border-border transition-all text-left group',
+                    isAllowed ? 'hover:border-primary hover:bg-primary/5' : 'opacity-60 cursor-not-allowed'
+                  )}
+                  onClick={() => handleDownloadReport(report.id)}
+                  disabled={!isAllowed || isDownloading}
                 >
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Icon className="h-5 w-5 text-primary group-hover:text-primary-foreground" />
+                  <div className="flex items-start gap-3 w-full">
+                    <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center transition-colors', reportIconClasses[report.color])}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">{report.name}</p>
+                      <p className="text-xs text-muted-foreground">{report.description}</p>
+                    </div>
+                    <FileText className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">{report.name}</p>
-                    <p className="text-xs text-muted-foreground">{report.description}</p>
+                  <div className="mt-2">
+                    <span
+                      className={cn(
+                        'inline-flex items-center justify-center rounded-md px-3 py-2 text-xs font-semibold transition-colors',
+                        isAllowed ? reportColorClasses[report.color] : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {isDownloading ? 'Generando...' : 'Descargar Excel'}
+                    </span>
                   </div>
-                  <FileText className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               );
             })}

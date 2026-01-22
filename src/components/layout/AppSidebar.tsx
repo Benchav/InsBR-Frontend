@@ -51,7 +51,7 @@ const SidebarContent = ({
   onLogout: () => void;
   onNavigate?: () => void;
 }) => (
-  <div className="flex h-full flex-col">
+  <div className="flex h-full flex-col min-h-0">
     {/* Logo */}
     <div className="flex h-16 items-center gap-3 border-b border-border px-6">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
@@ -79,7 +79,7 @@ const SidebarContent = ({
     )}
 
     {/* Navigation */}
-    <nav className="flex-1 space-y-1 px-3 py-4">
+    <nav className="flex-1 min-h-0 overflow-y-auto space-y-1 px-3 py-4">
       {visibleItems.map((item) => {
         const isActive = locationPath === item.href;
         return (
@@ -97,7 +97,7 @@ const SidebarContent = ({
     </nav>
 
     {/* Logout */}
-    <div className="border-t border-border p-3">
+    <div className="mt-auto border-t border-border p-3 bg-sidebar">
       <button onClick={onLogout} className="sidebar-item w-full text-left hover:text-destructive">
         <LogOut className="h-5 w-5" />
         <span>Cerrar Sesión</span>
@@ -130,7 +130,7 @@ export function AppSidebar({
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-        <SheetContent side="left" className="w-72 bg-sidebar p-0">
+        <SheetContent side="left" className="w-72 bg-sidebar p-0 h-full">
           <SidebarContent
             visibleItems={visibleItems}
             user={user}
