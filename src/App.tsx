@@ -20,7 +20,6 @@ import Proveedores from "./pages/Proveedores";
 import Reportes from "./pages/Reportes";
 import Caja from "./pages/Caja";
 import Creditos from "./pages/Creditos";
-import Encargos from "./pages/Encargos";
 import CuentasPorPagar from "./pages/CuentasPorPagar";
 import NotFound from "./pages/NotFound";
 
@@ -154,14 +153,6 @@ const App = () => (
               element={(
                 <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
                   <Creditos />
-                </RoleRoute>
-              )}
-            />
-            <Route
-              path="/encargos"
-              element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
-                  <Encargos />
                 </RoleRoute>
               )}
             />

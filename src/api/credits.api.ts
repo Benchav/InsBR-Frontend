@@ -12,7 +12,8 @@ export interface CreditAccount {
   totalAmount: number;
   paidAmount: number;
   balanceAmount: number;
-  status: 'PENDIENTE' | 'PAGADO_PARCIAL' | 'PAGADO';
+  status: 'PENDIENTE' | 'PAGADO_PARCIAL' | 'PAGADO' | 'PENDING' | 'PARTIAL' | 'PAID';
+  remainingBalance?: number;
   dueDate: string;
   deliveryDate?: string;
   createdAt: string;
@@ -38,18 +39,20 @@ export interface CreateCreditDto {
 }
 
 export const creditsApi = {
-  getAll: async (filters?: { type?: 'CXC' | 'CPP'; status?: string; branchId?: string }): Promise<CreditAccount[]> => {
+  getAll: async (filters?: { type?: 'CXC' | 'CPP'; status?: string; branchId?: string; supplierId?: string }): Promise<CreditAccount[]> => {
     const params = new URLSearchParams();
     if (filters?.type) params.append('type', filters.type);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.branchId) params.append('branchId', filters.branchId);
+    if (filters?.supplierId) params.append('supplierId', filters.supplierId);
 
     const { data } = await apiClient.get(`/api/credits?${params.toString()}`);
     return data;
   },
 
   registerPayment: async (payment: RegisterPaymentDto): Promise<CreditAccount> => {
-    const { data } = await apiClient.post('/api/credits/payments', payment);
+    const { creditAccountId, ...payload } = payment;
+    const { data } = await apiClient.post(`/api/credits/${creditAccountId}/payment`, payload);
     return data;
   },
 

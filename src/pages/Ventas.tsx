@@ -531,7 +531,9 @@ export default function Ventas() {
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Método de pago</span>
-                <Badge variant="secondary">{paymentMethod === 'CASH' ? 'Efectivo' : 'Crédito'}</Badge>
+                <Badge variant="secondary">
+                  {paymentMethod === 'CASH' ? 'Efectivo' : 'Crédito'}
+                </Badge>
               </div>
             </div>
 
@@ -601,7 +603,7 @@ export default function Ventas() {
                   <Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notas del encargo (opcional)</Label>
+                  <Label>Notas (opcional)</Label>
                   <Input value={creditNotes} onChange={(event) => setCreditNotes(event.target.value)} placeholder="Ej: Evento, pedido especial" />
                 </div>
               </div>

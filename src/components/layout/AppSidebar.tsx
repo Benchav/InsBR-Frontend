@@ -14,7 +14,6 @@ import {
   Wallet,
   Receipt,
   CreditCard,
-  ClipboardList,
   FileText
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +28,6 @@ const navigationItems: Array<{ name: string; href: string; icon: typeof LayoutDa
   { name: 'Inventario', href: '/inventario', icon: Boxes, roles: ['ADMIN', 'GERENTE'] },
   { name: 'Caja', href: '/caja', icon: Wallet, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
   { name: 'Créditos', href: '/creditos', icon: CreditCard, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
-  { name: 'Encargos', href: '/encargos', icon: ClipboardList, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
   { name: 'Cuentas por Pagar', href: '/cuentas-por-pagar', icon: FileText, roles: ['ADMIN', 'GERENTE'] },
   { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight, roles: ['ADMIN', 'GERENTE'] },
   { name: 'Clientes', href: '/clientes', icon: Users, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },

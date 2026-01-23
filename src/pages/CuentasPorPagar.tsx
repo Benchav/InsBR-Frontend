@@ -48,12 +48,33 @@ export default function CuentasPorPagar() {
   const [paymentNotes, setPaymentNotes] = useState('');
   const queryClient = useQueryClient();
 
+  const statusFilterMap: Record<'PENDIENTE' | 'PAGADO_PARCIAL' | 'PAGADO', 'PENDING' | 'PARTIAL' | 'PAID'> = {
+    PENDIENTE: 'PENDING',
+    PAGADO_PARCIAL: 'PARTIAL',
+    PAGADO: 'PAID',
+  };
+
+  const getStatusLabel = (status: CreditAccount['status']) => {
+    const normalized = status === 'PENDING' ? 'PENDIENTE'
+      : status === 'PARTIAL' ? 'PAGADO_PARCIAL'
+      : status === 'PAID' ? 'PAGADO'
+      : status;
+
+    if (normalized === 'PAGADO') {
+      return { label: 'Pagado', variant: 'secondary' as const };
+    }
+    if (normalized === 'PAGADO_PARCIAL') {
+      return { label: 'Parcial', variant: 'default' as const };
+    }
+    return { label: 'Pendiente', variant: 'destructive' as const };
+  };
+
   const { data: credits = [], isLoading } = useQuery({
     queryKey: ['credits-cpp', branchId, statusFilter],
     queryFn: () => creditsApi.getAll({
       type: 'CPP',
       branchId,
-      status: statusFilter === 'all' ? undefined : statusFilter,
+      status: statusFilter === 'all' ? undefined : statusFilterMap[statusFilter],
     }),
   });
 
@@ -192,20 +213,8 @@ export default function CuentasPorPagar() {
                         {formatCurrency(credit.balanceAmount)}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            credit.status === 'PAGADO'
-                              ? 'secondary'
-                              : credit.status === 'PAGADO_PARCIAL'
-                                ? 'default'
-                                : 'destructive'
-                          }
-                        >
-                          {credit.status === 'PAGADO'
-                            ? 'Pagado'
-                            : credit.status === 'PAGADO_PARCIAL'
-                              ? 'Parcial'
-                              : 'Pendiente'}
+                        <Badge variant={getStatusLabel(credit.status).variant}>
+                          {getStatusLabel(credit.status).label}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(credit.dueDate)}</TableCell>
@@ -223,7 +232,7 @@ export default function CuentasPorPagar() {
                           <Button
                             size="sm"
                             onClick={() => handleOpenPayment(credit)}
-                            disabled={credit.status === 'PAGADO'}
+                            disabled={credit.status === 'PAGADO' || credit.status === 'PAID'}
                           >
                             Abonar
                           </Button>
