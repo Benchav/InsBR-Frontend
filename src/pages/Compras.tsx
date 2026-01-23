@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { purchasesApi, CreatePurchaseDto, Purchase } from '@/api/purchases.api';
 import { productsApi } from '@/api/products.api';
-import { formatCurrency, formatDateTime } from '@/utils/formatters';
+import { formatCurrency, formatDateTime, toCents } from '@/utils/formatters';
 import {
   Dialog,
   DialogContent,
@@ -20,12 +20,16 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 
 export default function Compras() {
   const { currentBranchId } = useBranchStore();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const queryClient = useQueryClient();
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -44,11 +48,16 @@ export default function Compras() {
   // Item adding state
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [unitCost, setUnitCost] = useState(0);
+  const [unitCost, setUnitCost] = useState('');
 
   const { data: purchases = [], isLoading } = useQuery({
-    queryKey: ['purchases', branchId],
-    queryFn: () => purchasesApi.getAll(branchId ? { branchId } : undefined),
+    queryKey: ['purchases', branchId, startDate, endDate, supplierFilter],
+    queryFn: () => purchasesApi.getAll({
+      branchId: branchId || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      supplierId: supplierFilter || undefined,
+    }),
   });
 
   const { data: products = [] } = useQuery({
@@ -61,7 +70,7 @@ export default function Compras() {
     onSuccess: () => {
       toast.success('Orden de compra registrada');
       setIsCreateDialogOpen(false);
-      setNewPurchase({ supplierId: '', items: [], type: 'CASH', paymentMethod: 'CASH', invoiceNumber: '' });
+      setNewPurchase({ supplierId: '', items: [], type: 'CASH', paymentMethod: 'CASH', invoiceNumber: '', notes: '' });
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
     },
     onError: (err) => {
@@ -72,14 +81,15 @@ export default function Compras() {
 
   const addItem = () => {
     const product = products.find(p => p.id === selectedProduct);
-    if (!product || quantity <= 0 || unitCost < 0) return;
+    const unitCostValue = Number(unitCost);
+    if (!product || quantity <= 0 || !Number.isFinite(unitCostValue) || unitCostValue < 0) return;
 
     const newItem = {
       productId: product.id,
       productName: product.name,
       quantity: quantity,
-      unitCost: unitCost,
-      subtotal: quantity * unitCost
+      unitCost: toCents(unitCostValue),
+      subtotal: quantity * toCents(unitCostValue)
     };
 
     setNewPurchase(prev => ({
@@ -90,7 +100,7 @@ export default function Compras() {
     // Reset item inputs
     setSelectedProduct('');
     setQuantity(1);
-    setUnitCost(0);
+    setUnitCost('');
   };
 
   const removeItem = (index: number) => {
@@ -124,10 +134,8 @@ export default function Compras() {
       discount: 0,
       total: total,
       type: newPurchase.type as 'CASH' | 'CREDIT',
-      paymentMethod: newPurchase.paymentMethod as any,
-      ...(newPurchase.type === 'CREDIT' && newPurchase.invoiceNumber
-        ? { invoiceNumber: newPurchase.invoiceNumber }
-        : {}),
+      ...(newPurchase.type === 'CASH' ? { paymentMethod: newPurchase.paymentMethod as any } : {}),
+      ...(newPurchase.invoiceNumber ? { invoiceNumber: newPurchase.invoiceNumber } : {}),
       notes: newPurchase.notes
     });
   };
@@ -186,16 +194,14 @@ export default function Compras() {
                       onChange={(e) => setNewPurchase({ ...newPurchase, supplierId: e.target.value })}
                     />
                   </div>
-                  {newPurchase.type === 'CREDIT' && (
-                    <div className="space-y-2">
-                      <Label>No. Factura</Label>
-                      <Input
-                        placeholder="F-00123"
-                        value={newPurchase.invoiceNumber}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, invoiceNumber: e.target.value })}
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label>No. Factura</Label>
+                    <Input
+                      placeholder="F-00123"
+                      value={newPurchase.invoiceNumber}
+                      onChange={(e) => setNewPurchase({ ...newPurchase, invoiceNumber: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -209,17 +215,19 @@ export default function Compras() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Método Pago</Label>
-                    <Select value={newPurchase.paymentMethod} onValueChange={(val) => setNewPurchase({ ...newPurchase, paymentMethod: val as any })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CASH">Efectivo</SelectItem>
-                        <SelectItem value="TRANSFER">Transferencia</SelectItem>
-                        <SelectItem value="CHECK">Cheque</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {newPurchase.type === 'CASH' && (
+                    <div className="space-y-2">
+                      <Label>Método Pago</Label>
+                      <Select value={newPurchase.paymentMethod} onValueChange={(val) => setNewPurchase({ ...newPurchase, paymentMethod: val as any })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CASH">Efectivo</SelectItem>
+                          <SelectItem value="TRANSFER">Transferencia</SelectItem>
+                          <SelectItem value="CHECK">Cheque</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border rounded-md p-3 space-y-3 bg-muted/20">
@@ -242,7 +250,7 @@ export default function Compras() {
                     </div>
                     <div className="col-span-3 space-y-1">
                       <Label className="text-xs">Costo Unit.</Label>
-                      <Input type="number" className="h-8 text-xs" min="0" value={unitCost} onChange={(e) => setUnitCost(parseFloat(e.target.value))} />
+                      <Input type="number" className="h-8 text-xs" min="0" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
                     </div>
                     <div className="col-span-2">
                       <Button size="sm" className="h-8 w-full" variant="secondary" onClick={addItem}>Agregar</Button>
@@ -267,8 +275,8 @@ export default function Compras() {
                             <tr key={idx} className="border-t">
                               <td className="p-2 truncate max-w-[120px]">{item.productName}</td>
                               <td className="p-2 text-right">{item.quantity}</td>
-                              <td className="p-2 text-right">{item.unitCost}</td>
-                              <td className="p-2 text-right">{item.subtotal}</td>
+                              <td className="p-2 text-right">{formatCurrency(item.unitCost)}</td>
+                              <td className="p-2 text-right">{formatCurrency(item.subtotal)}</td>
                               <td className="p-2 text-center">
                                 <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => removeItem(idx)}>
                                   <Trash2 className="h-3 w-3" />
@@ -280,13 +288,24 @@ export default function Compras() {
                         <tfoot className="bg-muted/50 font-medium">
                           <tr>
                             <td colSpan={3} className="p-2 text-right">TOTAL</td>
-                            <td className="p-2 text-right">{calculateTotal()}</td>
+                            <td className="p-2 text-right">{formatCurrency(calculateTotal())}</td>
                             <td></td>
                           </tr>
                         </tfoot>
                       </table>
                     </div>
                   )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <Label>Notas</Label>
+                    <Textarea
+                      placeholder="Observaciones de la compra"
+                      value={newPurchase.notes}
+                      onChange={(e) => setNewPurchase({ ...newPurchase, notes: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
@@ -305,7 +324,7 @@ export default function Compras() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <KPICard
           title="Gasto Mensual"
-          value={isLoading ? "..." : `C$ ${currentMonthTotal.toLocaleString()}`}
+          value={isLoading ? "..." : formatCurrency(currentMonthTotal)}
           trend={0}
           trendLabel="Mes actual"
           icon={<DollarSign className="h-6 w-6 text-primary" />}
@@ -329,7 +348,7 @@ export default function Compras() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-col md:flex-row gap-3 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -339,10 +358,29 @@ export default function Compras() {
             className="pl-10"
           />
         </div>
-        <Button variant="outline">
-          <Filter className="mr-2 h-4 w-4" />
-          Todas las Sucursales
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-[160px]"
+          />
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-[160px]"
+          />
+        </div>
+        <div className="relative max-w-[220px]">
+          <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Proveedor ID"
+            value={supplierFilter}
+            onChange={(e) => setSupplierFilter(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
 
       {/* Purchases Table */}
