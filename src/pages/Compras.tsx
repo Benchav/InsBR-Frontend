@@ -11,6 +11,7 @@ import { purchasesApi, CreatePurchaseDto, Purchase } from '@/api/purchases.api';
 import { productsApi } from '@/api/products.api';
 import { suppliersApi } from '@/api/suppliers.api';
 import { formatCurrency, formatDateTime, toCents, toCurrency } from '@/utils/formatters';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -22,10 +23,21 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 export default function Compras() {
   const { currentBranchId } = useBranchStore();
+  const { user } = useAuth();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
@@ -34,6 +46,9 @@ export default function Compras() {
   const queryClient = useQueryClient();
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [cancelPurchase, setCancelPurchase] = useState<Purchase | null>(null);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const isAdmin = user?.role === 'ADMIN';
 
   // Create Purchase State
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -101,6 +116,24 @@ export default function Compras() {
     }
   });
 
+  const cancelPurchaseMutation = useMutation({
+    mutationFn: purchasesApi.cancel,
+    onSuccess: () => {
+      toast.success('Compra cancelada');
+      setIsCancelOpen(false);
+      setCancelPurchase(null);
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+    },
+    onError: (err) => {
+      const error = err as any;
+      if (error?.response?.status === 403) {
+        toast.error('No autorizado para cancelar compras');
+        return;
+      }
+      toast.error('Error al cancelar compra');
+    }
+  });
+
   const addItem = () => {
     const product = products.find(p => p.id === selectedProduct);
     const unitCostValue = Number(unitCost);
@@ -135,6 +168,11 @@ export default function Compras() {
   const handleViewPurchase = (purchase: (typeof purchases)[number]) => {
     setViewPurchase(purchase);
     setIsViewOpen(true);
+  };
+
+  const handleCancelPurchase = (purchase: Purchase) => {
+    setCancelPurchase(purchase);
+    setIsCancelOpen(true);
   };
 
   const calculateTotal = () => {
@@ -489,9 +527,21 @@ export default function Compras() {
                       {formatCurrency(purchase.total)}
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <Button variant="ghost" size="sm" onClick={() => handleViewPurchase(purchase)}>
-                        Ver
-                      </Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewPurchase(purchase)}>
+                          Ver
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => handleCancelPurchase(purchase)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -500,6 +550,25 @@ export default function Compras() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar compra?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de cancelar esta compra? Se revertirá el inventario y la deuda/pago asociado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cancelPurchase && cancelPurchaseMutation.mutate(cancelPurchase.id)}
+            >
+              Cancelar compra
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-[700px]">

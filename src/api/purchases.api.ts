@@ -92,4 +92,8 @@ export const purchasesApi = {
     const { data } = await apiClient.put(`/api/purchases/${purchaseId}`, updates);
     return data;
   },
+
+  cancel: async (purchaseId: string): Promise<void> => {
+    await apiClient.delete(`/api/purchases/${purchaseId}`);
+  },
 };
