@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { creditsApi, CreditAccount } from '@/api/credits.api';
+import { creditsApi, CreditAccount, CreditTicket } from '@/api/credits.api';
+import { apiClient } from '@/api/client';
 import { formatCurrency, formatDate, formatDateTime, toCents } from '@/utils/formatters';
 import { useBranchStore } from '@/stores/branchStore';
 import { Search, FileText } from 'lucide-react';
@@ -42,6 +43,7 @@ export default function CuentasPorPagar() {
   const [selectedCredit, setSelectedCredit] = useState<CreditAccount | null>(null);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isTicketOpen, setIsTicketOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'TRANSFER' | 'CHECK'>('CASH');
   const [paymentReference, setPaymentReference] = useState('');
@@ -82,6 +84,12 @@ export default function CuentasPorPagar() {
     queryKey: ['credits-cpp-history', selectedCredit?.id],
     queryFn: () => (selectedCredit ? creditsApi.getPaymentHistory(selectedCredit.id) : Promise.resolve([])),
     enabled: !!selectedCredit && isHistoryOpen,
+  });
+
+  const { data: ticketData, isLoading: isTicketLoading } = useQuery<CreditTicket | null>({
+    queryKey: ['credits-cpp-ticket', selectedCredit?.id],
+    queryFn: () => (selectedCredit ? creditsApi.getTicket(selectedCredit.id) : Promise.resolve(null)),
+    enabled: !!selectedCredit && isTicketOpen,
   });
 
   const registerPaymentMutation = useMutation({
@@ -126,6 +134,37 @@ export default function CuentasPorPagar() {
   const handleOpenHistory = (credit: CreditAccount) => {
     setSelectedCredit(credit);
     setIsHistoryOpen(true);
+  };
+
+  const handleOpenTicket = (credit: CreditAccount) => {
+    setSelectedCredit(credit);
+    setIsTicketOpen(true);
+  };
+
+  const handlePrintTicket = async (creditId: string) => {
+    try {
+      const response = await apiClient.get(`/api/credits/${creditId}/ticket/pdf`, { responseType: 'blob' });
+      const blobUrl = window.URL.createObjectURL(response.data);
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = blobUrl;
+      iframe.onload = () => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          window.URL.revokeObjectURL(blobUrl);
+          iframe.remove();
+        }, 1000);
+      };
+      document.body.appendChild(iframe);
+    } catch (error) {
+      toast.error('No se pudo generar el PDF');
+    }
   };
 
   const handleSubmitPayment = () => {
@@ -238,6 +277,14 @@ export default function CuentasPorPagar() {
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenTicket(credit)}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Estado
+                          </Button>
+                          <Button
+                            size="sm"
                             onClick={() => handleOpenPayment(credit)}
                             disabled={credit.status === 'PAGADO' || credit.status === 'PAID'}
                           >
@@ -337,6 +384,119 @@ export default function CuentasPorPagar() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTicketOpen} onOpenChange={setIsTicketOpen}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>Estado de Cuenta</DialogTitle>
+            <DialogDescription>Detalle completo de la deuda.</DialogDescription>
+          </DialogHeader>
+          {isTicketLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando...</p>
+          ) : !ticketData ? (
+            <p className="text-sm text-muted-foreground">No hay información disponible.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Cuenta</p>
+                  <p className="font-medium text-foreground">{ticketData.account.id}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Proveedor</p>
+                  <p className="font-medium text-foreground">{ticketData.account.supplierName || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Factura</p>
+                  <p className="font-medium text-foreground">{ticketData.account.invoiceNumber || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Vencimiento</p>
+                  <p className="font-medium text-foreground">
+                    {ticketData.account.dueDate ? formatDate(ticketData.account.dueDate) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total</p>
+                  <p className="font-semibold text-foreground">{formatCurrency(ticketData.account.total)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Pagado</p>
+                  <p className="font-semibold text-foreground">{formatCurrency(ticketData.account.paid)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Saldo</p>
+                  <p className="font-semibold text-foreground">{formatCurrency(ticketData.account.balance)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-md border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      <th className="text-left px-3 py-2">Producto</th>
+                      <th className="text-right px-3 py-2">Cant.</th>
+                      <th className="text-right px-3 py-2">Costo</th>
+                      <th className="text-right px-3 py-2">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ticketData.purchase.items.map((item, index) => (
+                      <tr key={`${item.productName || 'item'}-${index}`} className="border-t">
+                        <td className="px-3 py-2">{item.productName || '—'}</td>
+                        <td className="px-3 py-2 text-right">{item.quantity}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(item.unitCost)}</td>
+                        <td className="px-3 py-2 text-right">{formatCurrency(item.subtotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-md border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      <th className="text-left px-3 py-2">Fecha</th>
+                      <th className="text-left px-3 py-2">Método</th>
+                      <th className="text-left px-3 py-2">Referencia</th>
+                      <th className="text-right px-3 py-2">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ticketData.payments.length === 0 ? (
+                      <tr className="border-t">
+                        <td className="px-3 py-2" colSpan={4}>Sin pagos registrados.</td>
+                      </tr>
+                    ) : (
+                      ticketData.payments.map((payment, index) => (
+                        <tr key={`${payment.reference || 'payment'}-${index}`} className="border-t">
+                          <td className="px-3 py-2">
+                            {payment.date ? formatDateTime(payment.date) : '—'}
+                          </td>
+                          <td className="px-3 py-2">{payment.method || '—'}</td>
+                          <td className="px-3 py-2">{payment.reference || '—'}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(payment.amount)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {selectedCredit && (
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="outline"
+                onClick={() => handlePrintTicket(selectedCredit.id)}
+              >
+                Imprimir
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

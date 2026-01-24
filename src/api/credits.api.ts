@@ -31,6 +31,34 @@ export interface RegisterPaymentDto {
   notes?: string;
 }
 
+export interface CreditTicket {
+  account: {
+    id: string;
+    invoiceNumber?: string;
+    supplierName?: string;
+    status: string;
+    dueDate?: string;
+    total: number;
+    paid: number;
+    balance: number;
+  };
+  purchase: {
+    date?: string;
+    items: Array<{
+      productName?: string;
+      quantity: number;
+      unitCost: number;
+      subtotal: number;
+    }>;
+  };
+  payments: Array<{
+    amount: number;
+    date?: string;
+    method?: string;
+    reference?: string;
+  }>;
+}
+
 export interface CreateCreditDto {
   customerId: string;
   totalAmount: number;
@@ -71,6 +99,11 @@ export const creditsApi = {
 
   getPaymentHistory: async (creditAccountId: string): Promise<unknown[]> => {
     const { data } = await apiClient.get(`/api/credits/${creditAccountId}/payments`);
+    return data;
+  },
+
+  getTicket: async (creditAccountId: string): Promise<CreditTicket> => {
+    const { data } = await apiClient.get(`/api/credits/${creditAccountId}/ticket`);
     return data;
   },
 
