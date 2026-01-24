@@ -11,7 +11,9 @@ export interface PurchaseItem {
 export interface Purchase {
   id: string;
   branchId: string;
+  branchName?: string;
   supplierId: string;
+  supplierName?: string;
   items: PurchaseItem[];
   subtotal: number;
   tax: number;
@@ -27,6 +29,7 @@ export interface Purchase {
 
 export interface CreatePurchaseDto {
   supplierId: string;
+  branchId?: string;
   items: Array<{
     productId: string;
     productName: string;
@@ -68,14 +71,9 @@ export const purchasesApi = {
       ...item,
       subtotal: item.subtotal ?? item.quantity * item.unitCost,
     }));
-    const subtotal = items.reduce((sum, item) => sum + (item.subtotal ?? 0), 0);
     const payload = {
       ...purchase,
       items,
-      subtotal,
-      tax: purchase.tax ?? 0,
-      discount: purchase.discount ?? 0,
-      total: purchase.total ?? subtotal,
       ...(purchase.type === 'CREDIT' ? { paymentMethod: undefined } : {}),
     };
     const { data } = await apiClient.post('/api/purchases', payload);

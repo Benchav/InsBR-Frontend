@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Search, Filter, Download, Plus, DollarSign, Package, CheckCircle, Loader2, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { purchasesApi, CreatePurchaseDto, Purchase } from '@/api/purchases.api';
 import { productsApi } from '@/api/products.api';
-import { formatCurrency, formatDateTime, toCents } from '@/utils/formatters';
+import { suppliersApi } from '@/api/suppliers.api';
+import { formatCurrency, formatDateTime, toCents, toCurrency } from '@/utils/formatters';
 import {
   Dialog,
   DialogContent,
@@ -65,6 +66,22 @@ export default function Compras() {
     queryFn: () => productsApi.getAll()
   });
 
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers', branchId],
+    queryFn: () => suppliersApi.getAll({ branchId: branchId || undefined })
+  });
+
+  useEffect(() => {
+    if (!selectedProduct) {
+      setUnitCost('');
+      return;
+    }
+    const product = products.find(p => p.id === selectedProduct);
+    if (product) {
+      setUnitCost(toCurrency(product.costPrice).toFixed(2));
+    }
+  }, [selectedProduct, products]);
+
   const createPurchaseMutation = useMutation({
     mutationFn: purchasesApi.create,
     onSuccess: () => {
@@ -74,7 +91,12 @@ export default function Compras() {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
     },
     onError: (err) => {
-      console.error(err);
+      const error = err as any;
+      const responseData = error?.response?.data;
+      console.error('Purchase create error:', responseData || error);
+      if (responseData) {
+        console.error('Purchase create error (stringified):', JSON.stringify(responseData));
+      }
       toast.error('Error al registrar compra');
     }
   });
@@ -82,7 +104,7 @@ export default function Compras() {
   const addItem = () => {
     const product = products.find(p => p.id === selectedProduct);
     const unitCostValue = Number(unitCost);
-    if (!product || quantity <= 0 || !Number.isFinite(unitCostValue) || unitCostValue < 0) return;
+    if (!product || quantity <= 0 || !Number.isFinite(unitCostValue) || unitCostValue <= 0) return;
 
     const newItem = {
       productId: product.id,
@@ -121,13 +143,18 @@ export default function Compras() {
 
   const handleSubmit = () => {
     const total = calculateTotal();
-    if (!newPurchase.supplierId || total <= 0) {
+    if (!branchId) {
+      toast.error('Seleccione una sucursal antes de registrar la compra');
+      return;
+    }
+    if (!newPurchase.supplierId || (newPurchase.items?.length || 0) === 0 || total <= 0) {
       toast.error('Complete los datos requeridos');
       return;
     }
 
     createPurchaseMutation.mutate({
       supplierId: newPurchase.supplierId!,
+      branchId: branchId,
       items: newPurchase.items!,
       subtotal: total,
       tax: 0,
@@ -147,7 +174,7 @@ export default function Compras() {
     // Search filter
     const searchLower = searchTerm.toLowerCase();
     const idMatch = p.id.toLowerCase().includes(searchLower);
-    const supplierMatch = p.supplierId.toLowerCase().includes(searchLower);
+    const supplierMatch = (p.supplierName || p.supplierId).toLowerCase().includes(searchLower);
 
     return idMatch || supplierMatch;
   });
@@ -187,17 +214,24 @@ export default function Compras() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Proveedor (ID)</Label>
-                    <Input
-                      placeholder="ID Proveedor"
-                      value={newPurchase.supplierId}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, supplierId: e.target.value })}
-                    />
+                    <Label>Proveedor</Label>
+                    <Select value={newPurchase.supplierId} onValueChange={(val) => setNewPurchase({ ...newPurchase, supplierId: val })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar proveedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>No. Factura</Label>
+                    <Label>No. Factura (Opcional)</Label>
                     <Input
-                      placeholder="F-00123"
+                      placeholder="Dejar vacío para generar automáticamente"
                       value={newPurchase.invoiceNumber}
                       onChange={(e) => setNewPurchase({ ...newPurchase, invoiceNumber: e.target.value })}
                     />
@@ -246,11 +280,27 @@ export default function Compras() {
                     </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">Cant.</Label>
-                      <Input type="number" className="h-8 text-xs" min="1" value={quantity} onChange={(e) => setQuantity(parseFloat(e.target.value))} />
+                      <Input
+                        type="number"
+                        className="h-8 text-xs"
+                        min="1"
+                        value={Number.isFinite(quantity) ? quantity : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setQuantity(val === '' ? 0 : Number(val));
+                        }}
+                      />
                     </div>
                     <div className="col-span-3 space-y-1">
                       <Label className="text-xs">Costo Unit.</Label>
-                      <Input type="number" className="h-8 text-xs" min="0" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
+                      <Input
+                        type="number"
+                        className="h-8 text-xs"
+                        min="0"
+                        step="0.01"
+                        value={unitCost || ''}
+                        onChange={(e) => setUnitCost(e.target.value)}
+                      />
                     </div>
                     <div className="col-span-2">
                       <Button size="sm" className="h-8 w-full" variant="secondary" onClick={addItem}>Agregar</Button>
@@ -295,6 +345,10 @@ export default function Compras() {
                       </table>
                     </div>
                   )}
+                  <div className="flex items-center justify-end text-sm text-muted-foreground">
+                    <span className="mr-2">Total estimado:</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(calculateTotal())}</span>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
@@ -352,7 +406,7 @@ export default function Compras() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar orden o proveedor ID..."
+            placeholder="Buscar orden o proveedor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -375,7 +429,7 @@ export default function Compras() {
         <div className="relative max-w-[220px]">
           <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Proveedor ID"
+            placeholder="Proveedor"
             value={supplierFilter}
             onChange={(e) => setSupplierFilter(e.target.value)}
             className="pl-10"
@@ -409,10 +463,13 @@ export default function Compras() {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
-                          {purchase.supplierId.slice(0, 2).toUpperCase()}
+                          {(purchase.supplierName || purchase.supplierId).slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-medium">{purchase.supplierId}</p>
+                          <p className="text-sm font-medium">
+                            {purchase.supplierName || 'Proveedor Desconocido'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{purchase.supplierId}</p>
                         </div>
                       </div>
                     </td>
@@ -422,7 +479,7 @@ export default function Compras() {
                         purchase.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
                           purchase.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
                       )}>
-                        {purchase.branchId}
+                        {purchase.branchName || purchase.branchId}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-sm text-muted-foreground">
@@ -464,11 +521,11 @@ export default function Compras() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Proveedor</p>
-                  <p className="font-medium text-foreground">{viewPurchase.supplierId}</p>
+                  <p className="font-medium text-foreground">{viewPurchase.supplierName || viewPurchase.supplierId}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Sucursal</p>
-                  <p className="font-medium text-foreground">{viewPurchase.branchId}</p>
+                  <p className="font-medium text-foreground">{viewPurchase.branchName || viewPurchase.branchId}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Tipo</p>
