@@ -297,8 +297,6 @@ export default function Compras() {
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="CASH">Efectivo</SelectItem>
-                          <SelectItem value="TRANSFER">Transferencia</SelectItem>
-                          <SelectItem value="CHECK">Cheque</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
