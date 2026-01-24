@@ -144,26 +144,20 @@ export default function CuentasPorPagar() {
   const handlePrintTicket = async (creditId: string) => {
     try {
       const response = await apiClient.get(`/api/credits/${creditId}/ticket/pdf`, { responseType: 'blob' });
-      const blobUrl = window.URL.createObjectURL(response.data);
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.src = blobUrl;
-      iframe.onload = () => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          window.URL.revokeObjectURL(blobUrl);
-          iframe.remove();
-        }, 1000);
-      };
-      document.body.appendChild(iframe);
-    } catch (error) {
-      toast.error('No se pudo generar el PDF');
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 60000);
+    } catch (error: any) {
+      let message = 'No se pudo generar el PDF';
+      if (error?.response) {
+        message += ` (Error ${error.response.status}: ${error.response.statusText || error.message})`;
+      } else if (error?.message) {
+        message += ` (${error.message})`;
+      }
+      toast.error(message);
     }
   };
 
@@ -267,14 +261,6 @@ export default function CuentasPorPagar() {
                       <TableCell className="text-muted-foreground">{credit.invoiceNumber || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenHistory(credit)}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Historial
-                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
