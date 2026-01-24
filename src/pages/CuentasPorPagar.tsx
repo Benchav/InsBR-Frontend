@@ -95,7 +95,14 @@ export default function CuentasPorPagar() {
       setPaymentNotes('');
       queryClient.invalidateQueries({ queryKey: ['credits-cpp'] });
     },
-    onError: () => toast.error('No se pudo registrar el abono'),
+    onError: (err) => {
+      const error = err as any;
+      if (error?.response?.status === 400) {
+        toast.error('No se pudo registrar el abono: monto inválido o cuenta ya pagada');
+        return;
+      }
+      toast.error('No se pudo registrar el abono');
+    },
   });
 
   const filteredCredits = useMemo(() => {

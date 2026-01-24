@@ -50,9 +50,8 @@ export const creditsApi = {
     return data;
   },
 
-  registerPayment: async (payment: RegisterPaymentDto): Promise<CreditAccount> => {
-    const { creditAccountId, ...payload } = payment;
-    const { data } = await apiClient.post(`/api/credits/${creditAccountId}/payment`, payload);
+  registerPayment: async (payment: RegisterPaymentDto): Promise<unknown> => {
+    const { data } = await apiClient.post('/api/credits/payments', payment);
     return data;
   },
 
