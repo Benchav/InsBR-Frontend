@@ -7,6 +7,7 @@ export interface CreditAccount {
   customerId?: string;
   customerName?: string;
   supplierId?: string;
+  supplierName?: string;
   purchaseId?: string;
   saleId?: string;
   totalAmount: number;

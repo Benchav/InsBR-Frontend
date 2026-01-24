@@ -43,6 +43,7 @@ export interface CreatePurchaseDto {
   total?: number;
   type: 'CASH' | 'CREDIT';
   paymentMethod?: 'CASH' | 'TRANSFER' | 'CHECK';
+  dueDate?: string;
   invoiceNumber?: string;
   notes?: string;
 }

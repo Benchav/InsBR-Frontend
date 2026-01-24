@@ -200,6 +200,9 @@ export default function Compras() {
       total: total,
       type: newPurchase.type as 'CASH' | 'CREDIT',
       ...(newPurchase.type === 'CASH' ? { paymentMethod: newPurchase.paymentMethod as any } : {}),
+      ...(newPurchase.type === 'CREDIT' && newPurchase.dueDate
+        ? { dueDate: new Date(newPurchase.dueDate).toISOString() }
+        : {}),
       ...(newPurchase.invoiceNumber ? { invoiceNumber: newPurchase.invoiceNumber } : {}),
       notes: newPurchase.notes
     });
@@ -298,6 +301,16 @@ export default function Compras() {
                           <SelectItem value="CHECK">Cheque</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+                  {newPurchase.type === 'CREDIT' && (
+                    <div className="space-y-2">
+                      <Label>Vencimiento (opcional)</Label>
+                      <Input
+                        type="date"
+                        value={newPurchase.dueDate || ''}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, dueDate: e.target.value })}
+                      />
                     </div>
                   )}
                 </div>

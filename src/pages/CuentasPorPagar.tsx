@@ -108,7 +108,7 @@ export default function CuentasPorPagar() {
   const filteredCredits = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return credits.filter((credit) => {
-      const supplier = credit.supplierId?.toLowerCase() || '';
+      const supplier = (credit.supplierName || credit.supplierId || '').toLowerCase();
       const invoice = credit.invoiceNumber?.toLowerCase() || '';
       return credit.id.toLowerCase().includes(term) || supplier.includes(term) || invoice.includes(term);
     });
@@ -212,7 +212,7 @@ export default function CuentasPorPagar() {
                   filteredCredits.map((credit) => (
                     <TableRow key={credit.id}>
                       <TableCell className="font-medium">
-                        {credit.supplierId || 'Proveedor'}
+                        {credit.supplierName || credit.supplierId || 'Proveedor'}
                       </TableCell>
                       <TableCell>{formatCurrency(credit.totalAmount)}</TableCell>
                       <TableCell>{formatCurrency(credit.paidAmount)}</TableCell>
