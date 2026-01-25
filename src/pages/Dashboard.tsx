@@ -344,11 +344,50 @@ export default function Dashboard() {
 
       {/* Data Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Ventas Recientes: Cards en móvil, tabla en desktop */}
         <div className="lg:col-span-2 kpi-card animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-foreground">Ventas Recientes</h3>
           </div>
-          <div className="overflow-x-auto">
+          {/* Mobile: Cards */}
+          <div className="flex flex-col gap-3 sm:hidden">
+            {isLoadingSales ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">Cargando ventas...</div>
+            ) : recentSales.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">No hay ventas recientes</div>
+            ) : (
+              recentSales.map((sale) => (
+                <div key={sale.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-base text-foreground truncate">{sale.id}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground ml-auto">{getBranchLabel(sale.branchId)}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 text-xs mt-1">
+                    <span>Cliente: <span className="font-medium text-foreground">{sale.customerName || sale.customerId || 'Consumidor final'}</span></span>
+                    <span>Fecha: <span className="text-muted-foreground">{formatDateTime(sale.createdAt)}</span></span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-muted-foreground">Total</span>
+                    <span className="font-semibold text-base">{formatCurrency(sale.total)}</span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <span
+                      className={cn(
+                        'inline-flex px-2.5 py-1 rounded-full text-xs font-medium',
+                        (sale.status ?? 'ACTIVE') === 'ACTIVE'
+                          ? 'bg-success/10 text-success'
+                          : 'bg-destructive/10 text-destructive'
+                      )}
+                    >
+                      {(sale.status ?? 'ACTIVE') === 'ACTIVE' ? 'Activa' : 'Cancelada'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {/* Desktop: Table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
@@ -417,11 +456,36 @@ export default function Dashboard() {
             </table>
           </div>
         </div>
+        {/* Alertas de Stock: Cards en móvil, lista en desktop */}
         <div className="kpi-card animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-foreground">Alertas de Stock</h3>
           </div>
-          <div className="space-y-3">
+          {/* Mobile: Cards */}
+          <div className="flex flex-col gap-3 sm:hidden">
+            {isLoadingStockAlerts ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">Cargando alertas...</div>
+            ) : stockAlerts.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">Sin alertas de stock</div>
+            ) : (
+              stockAlerts.slice(0, 6).map((alert) => (
+                <div key={alert.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-base text-foreground truncate">{alert.product?.name || 'Producto'}</span>
+                    <span className="text-xs text-muted-foreground truncate">{alert.product?.sku || ''}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className={cn('text-xs font-semibold', alert.quantity <= alert.minStock ? 'text-destructive' : 'text-warning')}>
+                      {alert.quantity} u
+                    </span>
+                    <span className="text-xs text-muted-foreground">mín {alert.minStock}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {/* Desktop: Lista */}
+          <div className="hidden sm:block space-y-3">
             {isLoadingStockAlerts ? (
               <p className="text-sm text-muted-foreground">Cargando alertas...</p>
             ) : stockAlerts.length === 0 ? (
