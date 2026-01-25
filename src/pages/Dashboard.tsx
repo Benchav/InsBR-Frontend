@@ -244,8 +244,8 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {consolidatedBranches.map((branch) => (
-                      <tr key={branch.branchId} className="border-b border-border/50">
+                    {consolidatedBranches.map((branch, idx) => (
+                      <tr key={branch.branchId || idx} className="border-b border-border/50">
                         <td className="py-2 px-2 text-sm text-foreground">
                           {branch.branchName}
                         </td>
@@ -356,8 +356,8 @@ export default function Dashboard() {
             ) : recentSales.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">No hay ventas recientes</div>
             ) : (
-              recentSales.map((sale) => (
-                <div key={sale.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+              recentSales.map((sale, idx) => (
+                <div key={sale.id || idx} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-base text-foreground truncate">{sale.id}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground ml-auto">{getBranchLabel(sale.branchId)}</span>
@@ -413,8 +413,8 @@ export default function Dashboard() {
                     </td>
                   </tr>
                 ) : (
-                  recentSales.map((sale) => (
-                    <tr key={sale.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                  recentSales.map((sale, idx) => (
+                    <tr key={sale.id || idx} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                       <td className="py-3 px-2 text-sm font-medium text-foreground">{sale.id}</td>
                       <td className="py-3 px-2 text-sm text-muted-foreground">{formatDateTime(sale.createdAt)}</td>
                       <td className="py-3 px-2">
@@ -468,8 +468,8 @@ export default function Dashboard() {
             ) : stockAlerts.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">Sin alertas de stock</div>
             ) : (
-              stockAlerts.slice(0, 6).map((alert) => (
-                <div key={alert.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+              stockAlerts.slice(0, 6).map((alert, idx) => (
+                <div key={alert.id || idx} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-base text-foreground truncate">{alert.product?.name || 'Producto'}</span>
                     <span className="text-xs text-muted-foreground truncate">{alert.product?.sku || ''}</span>
@@ -491,8 +491,8 @@ export default function Dashboard() {
             ) : stockAlerts.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin alertas de stock</p>
             ) : (
-              stockAlerts.slice(0, 6).map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between">
+              stockAlerts.slice(0, 6).map((alert, idx) => (
+                <div key={alert.id || idx} className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
                       {alert.product?.name || 'Producto'}

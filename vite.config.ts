@@ -41,7 +41,28 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         navigateFallback: "/index.html",
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"]
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
+        // Permitir rutas SPA para navegación offline
+        navigateFallbackDenylist: [
+          // Ejemplo: rutas de APIS o recursos que NO deben ser manejados por el SW
+          /^\/api\//
+        ],
+        navigateFallbackAllowlist: [
+          /^\/$/,
+          /^\/ventas$/,
+          /^\/dashboard$/,
+          /^\/compras$/,
+          /^\/inventario$/,
+          /^\/clientes$/,
+          /^\/proveedores$/,
+          /^\/usuarios$/,
+          /^\/transferencias$/,
+          /^\/creditos$/,
+          /^\/cuentasporpagar$/,
+          /^\/reportes$/,
+          /^\/categorias$/,
+          /^\/todas\s*las\s*ventas$/i
+        ]
       },
       devOptions: {
         enabled: true,

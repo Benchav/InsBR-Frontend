@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/types/api.types';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 const navigationItems: Array<{ name: string; href: string; icon: typeof LayoutDashboard; roles: UserRole[] }> = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['ADMIN', 'GERENTE'] },
@@ -130,6 +131,10 @@ export function AppSidebar({
 
       <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
         <SheetContent side="left" className="w-72 bg-sidebar p-0 h-full">
+          <SheetHeader>
+            <SheetTitle className="sr-only">Menú principal</SheetTitle>
+            <SheetDescription className="sr-only">Navegación principal de la aplicación</SheetDescription>
+          </SheetHeader>
           <SidebarContent
             visibleItems={visibleItems}
             user={user}
