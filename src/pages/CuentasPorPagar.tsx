@@ -214,75 +214,128 @@ export default function CuentasPorPagar() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-md border overflow-x-auto">
-            <Table className="min-w-[900px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Proveedor</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Pagado</TableHead>
-                  <TableHead>Saldo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Vencimiento</TableHead>
-                  <TableHead>Factura</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
+          {/* Vista responsive: tarjetas en móvil, tabla en desktop */}
+          <div className="mt-4">
+            {/* Mobile: Cards */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              {isLoading ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">Cargando cuentas...</div>
+              ) : filteredCredits.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">No hay cuentas por pagar</div>
+              ) : (
+                filteredCredits.map((credit) => (
+                  <div key={credit.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-base text-foreground truncate">{credit.supplierName || credit.supplierId || 'Proveedor'}</span>
+                        <span className="block text-xs text-muted-foreground truncate">ID: {credit.id}</span>
+                      </div>
+                      <Badge variant={getStatusLabel(credit.status).variant} className="shrink-0">
+                        {getStatusLabel(credit.status).label}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-col gap-0.5 text-xs mt-1">
+                      <span>Total: <span className="font-medium text-foreground">{formatCurrency(credit.totalAmount)}</span></span>
+                      <span>Pagado: <span className="text-green-700">{formatCurrency(credit.paidAmount)}</span></span>
+                      <span>Saldo: <span className="font-semibold text-foreground">{formatCurrency(credit.balanceAmount)}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Vence: {formatDate(credit.dueDate)}</span>
+                      <span className="ml-auto">Factura: {credit.invoiceNumber || 'N/A'}</span>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleOpenTicket(credit)}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />Estado
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleOpenPayment(credit)}
+                        disabled={credit.status === 'PAGADO' || credit.status === 'PAID'}
+                      >
+                        Abonar
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop: Table */}
+            <div className="hidden sm:block rounded-md border overflow-x-auto">
+              <Table className="min-w-[900px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                      Cargando cuentas...
-                    </TableCell>
+                    <TableHead>Proveedor</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Pagado</TableHead>
+                    <TableHead>Saldo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Vencimiento</TableHead>
+                    <TableHead>Factura</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ) : filteredCredits.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                      No hay cuentas por pagar
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredCredits.map((credit) => (
-                    <TableRow key={credit.id}>
-                      <TableCell className="font-medium">
-                        {credit.supplierName || credit.supplierId || 'Proveedor'}
-                      </TableCell>
-                      <TableCell>{formatCurrency(credit.totalAmount)}</TableCell>
-                      <TableCell>{formatCurrency(credit.paidAmount)}</TableCell>
-                      <TableCell className="font-semibold">
-                        {formatCurrency(credit.balanceAmount)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusLabel(credit.status).variant}>
-                          {getStatusLabel(credit.status).label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(credit.dueDate)}</TableCell>
-                      <TableCell className="text-muted-foreground">{credit.invoiceNumber || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenTicket(credit)}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Estado
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleOpenPayment(credit)}
-                            disabled={credit.status === 'PAGADO' || credit.status === 'PAID'}
-                          >
-                            Abonar
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        Cargando cuentas...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : filteredCredits.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        No hay cuentas por pagar
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredCredits.map((credit) => (
+                      <TableRow key={credit.id}>
+                        <TableCell className="font-medium">
+                          {credit.supplierName || credit.supplierId || 'Proveedor'}
+                        </TableCell>
+                        <TableCell>{formatCurrency(credit.totalAmount)}</TableCell>
+                        <TableCell>{formatCurrency(credit.paidAmount)}</TableCell>
+                        <TableCell className="font-semibold">
+                          {formatCurrency(credit.balanceAmount)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusLabel(credit.status).variant}>
+                            {getStatusLabel(credit.status).label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{formatDate(credit.dueDate)}</TableCell>
+                        <TableCell className="text-muted-foreground">{credit.invoiceNumber || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenTicket(credit)}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              Estado
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenPayment(credit)}
+                              disabled={credit.status === 'PAGADO' || credit.status === 'PAID'}
+                            >
+                              Abonar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </Card>
       </div>
