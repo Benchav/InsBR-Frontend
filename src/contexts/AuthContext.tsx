@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, ReactNode, useContext } from
 import { authApi, LoginRequest, User } from '@/api/auth.api';
 import { saveAuthToken, saveUserData, getUserData, clearStorage } from '@/utils/storage';
 import { useBranchStore, BranchId } from '@/stores/branchStore';
+import { Permission, ROLE_PERMISSIONS } from '@/config/permissions';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
+  hasPermission: (permission: Permission) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,7 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     if (!user) return;
-    if (user.role !== 'ADMIN') {
+    if (user.role !== 'ADMIN') { // Fallback, though we should genericize this too eventually
       setCurrentBranch(mapUserBranchId(user.branchId));
     }
   }, [user, setCurrentBranch]);
@@ -55,6 +57,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const hasPermission = (permission: Permission): boolean => {
+    if (!user) return false;
+    const permissions = ROLE_PERMISSIONS[user.role];
+    return permissions?.includes(permission) || false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -63,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading,
         login,
         logout,
+        hasPermission,
       }}
     >
       {children}

@@ -1,5 +1,7 @@
 import { DashboardLayout } from '@/components/layout';
 import { useBranchStore } from '@/stores/branchStore';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Permission } from '@/config/permissions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +33,7 @@ import {
 
 export default function Inventario() {
   const { currentBranchId } = useBranchStore();
+  const { can } = usePermissions();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
@@ -226,10 +229,12 @@ export default function Inventario() {
             Exportar
           </Button>
 
-          <Button onClick={() => { resetProductForm(); setIsCreateDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Producto
-          </Button>
+          {can(Permission.MANAGE_PRODUCTS) && (
+            <Button onClick={() => { resetProductForm(); setIsCreateDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Producto
+            </Button>
+          )}
         </div>
       </div>
 
@@ -441,7 +446,8 @@ export default function Inventario() {
                         variant="outline"
                         size="sm"
                         className={cn('flex-1', stockDiriamba < 10 ? 'border-destructive text-destructive' : '')}
-                        onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-DIR-001')}
+                        onClick={() => can(Permission.ADJUST_STOCK) && openAdjustDialog(item.id, item.name, 'BRANCH-DIR-001')}
+                        disabled={!can(Permission.ADJUST_STOCK)}
                         title="Ajustar stock Diriamba"
                       >
                         Diriamba: <span className="font-bold ml-1">{stockDiriamba}</span>
@@ -452,7 +458,8 @@ export default function Inventario() {
                         variant="outline"
                         size="sm"
                         className={cn('flex-1', stockJinotepe < 10 ? 'border-destructive text-destructive' : '')}
-                        onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-JIN-001')}
+                        onClick={() => can(Permission.ADJUST_STOCK) && openAdjustDialog(item.id, item.name, 'BRANCH-JIN-001')}
+                        disabled={!can(Permission.ADJUST_STOCK)}
                         title="Ajustar stock Jinotepe"
                       >
                         Jinotepe: <span className="font-bold ml-1">{stockJinotepe}</span>
@@ -460,18 +467,22 @@ export default function Inventario() {
                     )}
                   </div>
                   <div className="flex gap-2 mt-2">
-                    <Button variant="secondary" size="sm" className="flex-1" onClick={() => openEditDialog(item)}>
-                      <Edit className="h-4 w-4 mr-1" />Editar
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}
-                      title="Agregar stock manual"
-                    >
-                      <PlusCircle className="h-4 w-4 mr-1" />Stock
-                    </Button>
+                    {can(Permission.MANAGE_PRODUCTS) && (
+                      <Button variant="secondary" size="sm" className="flex-1" onClick={() => openEditDialog(item)}>
+                        <Edit className="h-4 w-4 mr-1" />Editar
+                      </Button>
+                    )}
+                    {can(Permission.ADJUST_STOCK) && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}
+                        title="Agregar stock manual"
+                      >
+                        <PlusCircle className="h-4 w-4 mr-1" />Stock
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
@@ -512,9 +523,10 @@ export default function Inventario() {
                       <td className="py-4 px-4"><Badge variant="secondary">{item.category}</Badge></td>
 
                       {showDiriamba && (
-                        <td className="py-4 px-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-DIR-001')}
-                          title="Clic para ajustar stock Diriamba"
+                        <td className="py-4 px-4 text-center transition-colors"
+                          onClick={() => can(Permission.ADJUST_STOCK) && openAdjustDialog(item.id, item.name, 'BRANCH-DIR-001')}
+                          style={{ cursor: can(Permission.ADJUST_STOCK) ? 'pointer' : 'default' }}
+                          title={can(Permission.ADJUST_STOCK) ? "Clic para ajustar stock Diriamba" : "Stock Diriamba"}
                         >
                           <span className={cn('font-semibold', stockDiriamba < 10 ? 'text-destructive' : 'text-foreground')}>
                             {stockDiriamba}
@@ -523,9 +535,10 @@ export default function Inventario() {
                       )}
 
                       {showJinotepe && (
-                        <td className="py-4 px-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-JIN-001')}
-                          title="Clic para ajustar stock Jinotepe"
+                        <td className="py-4 px-4 text-center transition-colors"
+                          onClick={() => can(Permission.ADJUST_STOCK) && openAdjustDialog(item.id, item.name, 'BRANCH-JIN-001')}
+                          style={{ cursor: can(Permission.ADJUST_STOCK) ? 'pointer' : 'default' }}
+                          title={can(Permission.ADJUST_STOCK) ? "Clic para ajustar stock Jinotepe" : "Stock Jinotepe"}
                         >
                           <span className={cn('font-semibold', stockJinotepe < 10 ? 'text-destructive' : 'text-foreground')}>
                             {stockJinotepe}
@@ -536,17 +549,21 @@ export default function Inventario() {
                       <td className="py-4 px-4 text-center font-bold">{total}</td>
                       <td className="py-4 px-4 text-right font-medium">{formatCurrency(item.retailPrice)}</td>
                       <td className="py-4 px-4 text-center flex justify-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}
-                          title="Agregar stock manual"
-                        >
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
+                        {can(Permission.MANAGE_PRODUCTS) && (
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {can(Permission.ADJUST_STOCK) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}
+                            title="Agregar stock manual"
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

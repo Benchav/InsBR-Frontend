@@ -16,26 +16,26 @@ import {
   CreditCard,
   FileText
 } from 'lucide-react';
+import { Permission } from '@/config/permissions';
 import { useAuth } from '@/contexts/AuthContext';
-import type { UserRole } from '@/types/api.types';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
-const navigationItems: Array<{ name: string; href: string; icon: typeof LayoutDashboard; roles: UserRole[] }> = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Ventas', href: '/ventas', icon: ShoppingCart, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
-  { name: 'Todas las Ventas', href: '/ventas-todas', icon: Receipt, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Compras', href: '/compras', icon: Package, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Inventario', href: '/inventario', icon: Boxes, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Caja', href: '/caja', icon: Wallet, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
-  { name: 'Créditos', href: '/creditos', icon: CreditCard, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
-  { name: 'Cuentas por Pagar', href: '/cuentas-por-pagar', icon: FileText, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Clientes', href: '/clientes', icon: Users, roles: ['ADMIN', 'GERENTE', 'CAJERO'] },
-  { name: 'Proveedores', href: '/proveedores', icon: Truck, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Usuarios', href: '/usuarios', icon: Users, roles: ['ADMIN'] },
-  { name: 'Reportes', href: '/reportes', icon: FileBarChart, roles: ['ADMIN', 'GERENTE'] },
-  { name: 'Categorías', href: '/admin-categorias', icon: Package, roles: ['ADMIN', 'GERENTE'] },
+const navigationItems: Array<{ name: string; href: string; icon: typeof LayoutDashboard; permission: Permission }> = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: Permission.VIEW_DASHBOARD },
+  { name: 'Ventas', href: '/ventas', icon: ShoppingCart, permission: Permission.VIEW_POS },
+  { name: 'Todas las Ventas', href: '/ventas-todas', icon: Receipt, permission: Permission.VIEW_SALES_HISTORY },
+  { name: 'Compras', href: '/compras', icon: Package, permission: Permission.MANAGE_PRODUCTS },
+  { name: 'Inventario', href: '/inventario', icon: Boxes, permission: Permission.VIEW_INVENTORY },
+  { name: 'Caja', href: '/caja', icon: Wallet, permission: Permission.MANAGE_CASH_OPENING },
+  { name: 'Créditos', href: '/creditos', icon: CreditCard, permission: Permission.VIEW_SALES_HISTORY },
+  { name: 'Cuentas por Pagar', href: '/cuentas-por-pagar', icon: FileText, permission: Permission.VIEW_EXPENSES },
+  { name: 'Transferencias', href: '/transferencias', icon: ArrowLeftRight, permission: Permission.VIEW_TRANSFERS },
+  { name: 'Clientes', href: '/clientes', icon: Users, permission: Permission.VIEW_POS },
+  { name: 'Proveedores', href: '/proveedores', icon: Truck, permission: Permission.MANAGE_PRODUCTS },
+  { name: 'Usuarios', href: '/usuarios', icon: Users, permission: Permission.MANAGE_USERS },
+  { name: 'Reportes', href: '/reportes', icon: FileBarChart, permission: Permission.VIEW_REPORTS },
+  { name: 'Categorías', href: '/admin-categorias', icon: Package, permission: Permission.MANAGE_PRODUCTS },
 ];
 
 const SidebarContent = ({
@@ -114,9 +114,8 @@ export function AppSidebar({
   onMobileOpenChange: (open: boolean) => void;
 }) {
   const location = useLocation();
-  const { user, logout } = useAuth();
-  const role = user?.role;
-  const visibleItems = role ? navigationItems.filter((item) => item.roles.includes(role)) : navigationItems;
+  const { user, logout, hasPermission } = useAuth();
+  const visibleItems = navigationItems.filter((item) => hasPermission(item.permission));
 
   return (
     <>

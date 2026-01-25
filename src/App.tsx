@@ -33,15 +33,17 @@ const getDefaultRoute = (role?: UserRole) => {
   return '/login';
 };
 
-const RoleRoute = ({ roles, children }: { roles: UserRole[]; children: JSX.Element }) => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+import { Permission } from '@/config/permissions';
+
+const PermissionRoute = ({ permission, children }: { permission: Permission; children: JSX.Element }) => {
+  const { user, isLoading, isAuthenticated, hasPermission } = useAuth();
 
   if (isLoading) return null;
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!roles.includes(user.role)) {
+  if (!hasPermission(permission)) {
     return <Navigate to={getDefaultRoute(user.role)} replace />;
   }
 
@@ -66,113 +68,113 @@ const App = () => (
             <Route
               path="/"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.VIEW_DASHBOARD}>
                   <Dashboard />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/ventas"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                <PermissionRoute permission={Permission.VIEW_POS}>
                   <Ventas />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/ventas-todas"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.VIEW_SALES_HISTORY}>
                   <VentasTodas />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/compras"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.MANAGE_PRODUCTS}>
                   <Compras />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/inventario"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.VIEW_INVENTORY}>
                   <Inventario />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/transferencias"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.VIEW_TRANSFERS}>
                   <Transferencias />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/usuarios"
               element={(
-                <RoleRoute roles={['ADMIN']}>
+                <PermissionRoute permission={Permission.MANAGE_USERS}>
                   <Usuarios />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/clientes"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                <PermissionRoute permission={Permission.VIEW_POS}>
                   <Clientes />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/proveedores"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.MANAGE_PRODUCTS}>
                   <Proveedores />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/reportes"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.VIEW_REPORTS}>
                   <Reportes />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/caja"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                <PermissionRoute permission={Permission.MANAGE_CASH_OPENING}>
                   <Caja />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/creditos"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE', 'CAJERO']}>
+                <PermissionRoute permission={Permission.VIEW_SALES_HISTORY}>
                   <Creditos />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/cuentas-por-pagar"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.VIEW_EXPENSES}>
                   <CuentasPorPagar />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route
               path="/admin-categorias"
               element={(
-                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                <PermissionRoute permission={Permission.MANAGE_PRODUCTS}>
                   <AdminCategorias />
-                </RoleRoute>
+                </PermissionRoute>
               )}
             />
             <Route path="*" element={<NotFound />} />
