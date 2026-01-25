@@ -40,7 +40,7 @@ export default function Caja() {
   const isReadOnly = user?.role === 'CAJERO';
   const isAdmin = user?.role === 'ADMIN';
   const { currentBranchId } = useBranchStore();
-  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
+  const branchId = currentBranchId;
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -101,6 +101,10 @@ export default function Caja() {
     }
     if (!movementDescription.trim()) {
       toast.error('La descripción es obligatoria');
+      return;
+    }
+    if (branchId !== 'BRANCH-JIN-001' && branchId !== 'BRANCH-DIR-001') {
+      toast.error('Debe seleccionar una sucursal válida (Jinotepe o Diriamba) antes de registrar el movimiento de caja');
       return;
     }
     createMovementMutation.mutate({

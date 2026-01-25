@@ -181,8 +181,8 @@ export default function Compras() {
 
   const handleSubmit = () => {
     const total = calculateTotal();
-    if (!branchId) {
-      toast.error('Seleccione una sucursal antes de registrar la compra');
+    if (branchId !== 'BRANCH-JIN-001' && branchId !== 'BRANCH-DIR-001') {
+      toast.error('Debe seleccionar una sucursal válida (Jinotepe o Diriamba) antes de registrar la compra');
       return;
     }
     if (!newPurchase.supplierId || (newPurchase.items?.length || 0) === 0 || total <= 0) {
@@ -209,8 +209,9 @@ export default function Compras() {
   };
 
   const filteredPurchases = purchases.filter((p) => {
-    // Filter by branch
-    if (currentBranchId !== 'ALL' && p.branchId !== currentBranchId) return false;
+    // Filtrar por sucursal, nunca permitir 'ALL' ni undefined
+    if (currentBranchId === 'ALL' || !currentBranchId) return false;
+    if (p.branchId !== currentBranchId) return false;
 
     // Search filter
     const searchLower = searchTerm.toLowerCase();

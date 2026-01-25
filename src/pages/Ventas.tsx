@@ -43,7 +43,7 @@ const categories = ['Todos', 'Fertilizantes', 'Semillas', 'Herbicidas', 'Fungici
 export default function Ventas() {
   const { currentBranchId, getCurrentBranch } = useBranchStore();
   const currentBranch = getCurrentBranch();
-  const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
+  const branchId = currentBranchId;
   const queryClient = useQueryClient();
 
   // Queries
@@ -134,8 +134,8 @@ export default function Ventas() {
 
   // Checkout Logic
   const handleCheckout = () => {
-    if (currentBranchId === 'ALL') {
-      toast.error('Selecciona una sucursal específica para realizar ventas');
+    if (currentBranchId !== 'BRANCH-JIN-001' && currentBranchId !== 'BRANCH-DIR-001') {
+      toast.error('Selecciona una sucursal válida (Jinotepe o Diriamba) para realizar ventas');
       return;
     }
     setAmountPaid('');
@@ -166,22 +166,21 @@ export default function Ventas() {
   });
 
   const handleConfirmSale = () => {
-    if (currentBranchId === 'ALL') return;
-
+    if (currentBranchId !== 'BRANCH-JIN-001' && currentBranchId !== 'BRANCH-DIR-001') {
+      toast.error('Debe seleccionar una sucursal válida (Jinotepe o Diriamba) antes de registrar la venta');
+      return;
+    }
     if (paymentMethod === 'CASH' && amountPaidCents < total) {
       toast.error('Monto recibido insuficiente', {
         description: 'El efectivo ingresado debe cubrir el total a pagar.'
       });
       return;
     }
-
     if (paymentMethod === 'CREDIT' && !selectedCustomerId && !customerName.trim()) {
       toast.error('Seleccione o ingrese un cliente para crédito');
       return;
     }
-
     const discountFactor = 1 - discount / 100;
-
     createSaleMutation.mutate({
       branchId: currentBranchId,
       items: cart.map(item => {
@@ -198,15 +197,12 @@ export default function Ventas() {
       deliveryDate: paymentMethod === 'CREDIT' && deliveryDate ? deliveryDate : undefined,
       notes: paymentMethod === 'CREDIT' && creditNotes.trim() ? creditNotes.trim() : undefined,
     });
-  };
+  }
 
   // Combining Data
   const getProductStock = (productId: string, branchId: string) => {
     const productStocks = stocks.filter(s => s.productId === productId);
-    if (branchId === 'ALL') {
-      // Sum all stocks if necessary, or just return 0 to force selection
-      return productStocks.reduce((acc, curr) => acc + curr.quantity, 0);
-    }
+    // No permitir 'ALL', solo IDs válidos
     const stockEntry = productStocks.find(s => s.branchId === branchId);
     return stockEntry ? stockEntry.quantity : 0;
   };
@@ -222,7 +218,7 @@ export default function Ventas() {
 
     // Branch Filter logic
     let hasStock = true;
-    if (currentBranchId !== 'ALL') {
+    if (currentBranchId === 'BRANCH-JIN-001' || currentBranchId === 'BRANCH-DIR-001') {
       const stock = getProductStock(p.id, currentBranchId);
       hasStock = stock > 0;
     }
@@ -309,7 +305,7 @@ export default function Ventas() {
                 const stock = getProductStock(product.id, currentBranchId);
                 const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
                 const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-JIN-001');
-                const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
+                const displayStock = stock;
                 return (
                   <div
                     key={product.id}
@@ -348,11 +344,8 @@ export default function Ventas() {
                     <tr className="border-b border-border">
                       <th className="table-header text-left py-3 px-2">Producto</th>
                       <th className="table-header text-center py-3 px-2">
-                        {currentBranchId === 'ALL' ? 'Stock Diriamba' : 'Stock'}
+                        Stock
                       </th>
-                      {currentBranchId === 'ALL' && (
-                        <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
-                      )}
                       <th className="table-header text-right py-3 px-2">Precio Unit.</th>
                     </tr>
                   </thead>
@@ -360,9 +353,7 @@ export default function Ventas() {
                     {filteredProducts.map((product) => {
                       const cartItem = cart.find((item) => item.id === product.id);
                       const stock = getProductStock(product.id, currentBranchId);
-                      const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
-                      const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-JIN-001');
-                      const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
+                      const displayStock = stock;
                       const isLowStock = displayStock < 10;
                       return (
                         <tr
@@ -394,16 +385,7 @@ export default function Ventas() {
                               {displayStock}
                             </span>
                           </td>
-                          {currentBranchId === 'ALL' && (
-                            <td className="py-3 px-2 text-center">
-                              <span className={cn(
-                                'inline-flex items-center gap-1 text-sm font-medium',
-                                stockJinotepe < 10 ? 'text-destructive' : 'text-success'
-                              )}>
-                                {stockJinotepe}
-                              </span>
-                            </td>
-                          )}
+                          {/* Eliminado: columna Stock Jinotepe para 'ALL' */}
                           <td className="py-3 px-2 text-right font-medium">
                             {formatCurrency(product.retailPrice)}
                           </td>
