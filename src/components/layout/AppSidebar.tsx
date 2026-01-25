@@ -34,6 +34,7 @@ const navigationItems: Array<{ name: string; href: string; icon: typeof LayoutDa
   { name: 'Proveedores', href: '/proveedores', icon: Truck, roles: ['ADMIN', 'GERENTE'] },
   { name: 'Usuarios', href: '/usuarios', icon: Users, roles: ['ADMIN'] },
   { name: 'Reportes', href: '/reportes', icon: FileBarChart, roles: ['ADMIN', 'GERENTE'] },
+  { name: 'Categorías', href: '/admin-categorias', icon: Package, roles: ['ADMIN', 'GERENTE'] },
 ];
 
 const SidebarContent = ({

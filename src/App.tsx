@@ -22,6 +22,7 @@ import Caja from "./pages/Caja";
 import Creditos from "./pages/Creditos";
 import CuentasPorPagar from "./pages/CuentasPorPagar";
 import NotFound from "./pages/NotFound";
+import AdminCategorias from "./pages/AdminCategorias";
 
 const queryClient = new QueryClient();
 
@@ -161,6 +162,14 @@ const App = () => (
               element={(
                 <RoleRoute roles={['ADMIN', 'GERENTE']}>
                   <CuentasPorPagar />
+                </RoleRoute>
+              )}
+            />
+            <Route
+              path="/admin-categorias"
+              element={(
+                <RoleRoute roles={['ADMIN', 'GERENTE']}>
+                  <AdminCategorias />
                 </RoleRoute>
               )}
             />
