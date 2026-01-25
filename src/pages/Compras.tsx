@@ -451,44 +451,133 @@ export default function Compras() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar orden o proveedor..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col gap-2 md:flex-row md:gap-3 mb-6">
+        {/* Mobile: filtros apilados */}
+        <div className="flex flex-col gap-2 sm:hidden">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar orden o proveedor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 text-sm"
+            />
+          </div>
+          <div className="flex gap-2 w-full">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="flex-1 text-sm"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="flex-1 text-sm"
+            />
+          </div>
+          <div className="relative w-full">
+            <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Proveedor"
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              className="pl-10 text-sm"
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-[160px]"
-          />
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-[160px]"
-          />
-        </div>
-        <div className="relative max-w-[220px]">
-          <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Proveedor"
-            value={supplierFilter}
-            onChange={(e) => setSupplierFilter(e.target.value)}
-            className="pl-10"
-          />
+        {/* Desktop: filtros en línea */}
+        <div className="hidden sm:flex flex-1 flex-row gap-2 md:gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar orden o proveedor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-[160px]"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-[160px]"
+            />
+          </div>
+          <div className="relative max-w-[220px]">
+            <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Proveedor"
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Purchases Table */}
+      {/* Purchases Table/Card Responsive */}
       <div className="kpi-card overflow-hidden p-0">
-        <div className="overflow-x-auto">
+        {/* Mobile: Cards */}
+        <div className="flex flex-col gap-3 sm:hidden">
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredPurchases.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+              No hay compras registradas
+            </div>
+          ) : (
+            filteredPurchases.map((purchase) => (
+              <div key={purchase.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
+                    {(purchase.supplierName || purchase.supplierId).slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="font-semibold text-base text-foreground truncate">{purchase.supplierName || 'Proveedor Desconocido'}</span>
+                    <span className="text-xs text-muted-foreground truncate">{purchase.supplierId}</span>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground ml-auto">{purchase.branchName || purchase.branchId}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <span>Orden: <span className="font-medium text-foreground">{purchase.id}</span></span>
+                  <span className="ml-auto">{new Date(purchase.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs text-muted-foreground">Total</span>
+                  <span className="font-semibold text-base">{formatCurrency(purchase.total)}</span>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewPurchase(purchase)}>
+                    Ver
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleCancelPurchase(purchase)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />Cancelar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {/* Desktop: Table */}
+        <div className="hidden sm:block overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
