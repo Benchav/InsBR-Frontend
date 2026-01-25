@@ -239,7 +239,7 @@ export default function Inventario() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Producto</DialogTitle>
-            <DialogDescription>Ingresa los detalles del producto para el catálogo global.</DialogDescription>
+            <DialogDescription>Ingresa los detalles del insumo pastelero para el catálogo global.</DialogDescription>
           </DialogHeader>
           <ProductFormContent form={productForm} setForm={setProductForm} />
           <div className="flex justify-end gap-2">
@@ -573,11 +573,11 @@ function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
     <div className="grid grid-cols-2 gap-4 py-4">
       <div className="space-y-2 col-span-2">
         <Label>Nombre del Producto</Label>
-        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Fertilizante Triple 15" />
+        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Harina de Trigo 0000" />
       </div>
       <div className="space-y-2">
         <Label>SKU / Código</Label>
-        <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="FERT-001" />
+        <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="HAR-001" />
       </div>
       <div className="space-y-2">
         <Label>Categoría</Label>
@@ -602,7 +602,7 @@ function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
       </div>
       <div className="space-y-2 col-span-2">
         <Label>Descripción</Label>
-        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ej. Harina de trigo refinada especial para repostería. Saco de 50kg." />
       </div>
     </div>
   );
