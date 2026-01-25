@@ -6,6 +6,8 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+import { MobileNav } from './MobileNav';
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -14,10 +16,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <AppSidebar mobileOpen={isMobileSidebarOpen} onMobileOpenChange={setIsMobileSidebarOpen} />
       <div className="md:pl-64">
         <TopBar onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
-        <main className="p-4 md:p-6">
+        <main className="p-4 md:p-6 pb-20 md:pb-6"> {/* Added pb-20 for MobileNav space */}
           {children}
         </main>
       </div>
+      <MobileNav />
     </div>
   );
 }
