@@ -182,75 +182,124 @@ export default function Clientes() {
             <div className="text-sm text-muted-foreground">{filteredCustomers.length} clientes</div>
           </div>
 
-          <div className="mt-4 rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
+          {/* Vista responsive: tarjetas en móvil, tabla en desktop */}
+          <div className="mt-4">
+            {/* Mobile: Cards */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              {isLoading ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                </div>
+              ) : filteredCustomers.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+                  No hay clientes registrados
+                </div>
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <div key={customer.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                        <UserCircle2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="font-semibold text-base text-foreground truncate">{customer.name}</span>
+                        <span className="text-xs text-muted-foreground truncate">{customer.taxId || 'Sin RUC'}</span>
+                      </div>
+                      <Badge variant={customer.isActive ? 'default' : 'outline'} className="shrink-0">
+                        {customer.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-col gap-0.5 text-sm mt-1">
+                      <span className="font-medium">{customer.contactName || 'Sin contacto'}</span>
+                      <span className="text-xs text-muted-foreground truncate">{customer.email || 'Sin correo'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Tel: {customer.phone || '-'}</span>
+                      <span className="ml-auto"><Badge variant="secondary">{customer.type === 'WHOLESALE' ? 'Mayorista' : 'Retail'}</Badge></span>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(customer)}>
+                        <Pencil className="h-4 w-4 mr-1" />Editar
+                      </Button>
+                      <Button variant="destructive" size="sm" className="flex-1" onClick={() => handleDelete(customer)}>
+                        <Trash2 className="h-4 w-4 mr-1" />Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop: Table */}
+            <div className="hidden sm:block rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Contacto</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ) : filteredCustomers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      No hay clientes registrados
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                            <UserCircle2 className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span>{customer.name}</span>
-                            <span className="text-xs text-muted-foreground">{customer.taxId || 'Sin RUC'}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col text-sm">
-                          <span>{customer.contactName || 'Sin contacto'}</span>
-                          <span className="text-xs text-muted-foreground">{customer.email || 'Sin correo'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{customer.phone || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {customer.type === 'WHOLESALE' ? 'Mayorista' : 'Retail'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={customer.isActive ? 'default' : 'outline'}>
-                          {customer.isActive ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(customer)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : filteredCustomers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                        No hay clientes registrados
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredCustomers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                              <UserCircle2 className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span>{customer.name}</span>
+                              <span className="text-xs text-muted-foreground">{customer.taxId || 'Sin RUC'}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-sm">
+                            <span>{customer.contactName || 'Sin contacto'}</span>
+                            <span className="text-xs text-muted-foreground">{customer.email || 'Sin correo'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{customer.phone || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {customer.type === 'WHOLESALE' ? 'Mayorista' : 'Retail'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={customer.isActive ? 'default' : 'outline'}>
+                            {customer.isActive ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(customer)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </Card>
       </div>
@@ -266,119 +315,7 @@ export default function Clientes() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Nombre Comercial</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                  placeholder="Cliente S.A."
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Contacto</Label>
-                <Input
-                  value={formData.contactName}
-                  onChange={(event) => setFormData({ ...formData, contactName: event.target.value })}
-                  placeholder="Nombre del contacto"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Teléfono</Label>
-                <Input
-                  value={formData.phone}
-                  onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
-                  placeholder="+505 0000 0000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Correo</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(event) => setFormData({ ...formData, email: event.target.value })}
-                  placeholder="correo@cliente.com"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>RUC / Tax ID</Label>
-                <Input
-                  value={formData.taxId}
-                  onChange={(event) => setFormData({ ...formData, taxId: event.target.value })}
-                  placeholder="J0310000000000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Cliente</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: 'RETAIL' | 'WHOLESALE') =>
-                    setFormData({ ...formData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="RETAIL">Retail</SelectItem>
-                    <SelectItem value="WHOLESALE">Mayorista</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Límite de Crédito</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={formData.creditLimit ?? 0}
-                  onChange={(event) =>
-                    setFormData({ ...formData, creditLimit: Number(event.target.value) })
-                  }
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Dirección</Label>
-                <Input
-                  value={formData.address}
-                  onChange={(event) => setFormData({ ...formData, address: event.target.value })}
-                  placeholder="Dirección fiscal o comercial"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">Cliente activo</p>
-                <p className="text-xs text-muted-foreground">Habilita operaciones comerciales.</p>
-              </div>
-              <Switch
-                checked={!!formData.isActive}
-                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                {(createMutation.isPending || updateMutation.isPending) && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Guardar
-              </Button>
-            </div>
+            {/* ...existing code... */}
           </form>
         </DialogContent>
       </Dialog>
