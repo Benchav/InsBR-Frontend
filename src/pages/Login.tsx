@@ -39,8 +39,8 @@ export default function Login() {
           {/* Brand Panel */}
           <div className="hidden lg:flex flex-col gap-6">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
-                <Leaf className="h-8 w-8 text-primary-foreground" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm overflow-hidden">
+                <img src="/pwa-192x192.png" alt="Insumos Barrera" className="h-full w-full object-cover" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Insumos Barrera</h1>
@@ -73,8 +73,8 @@ export default function Login() {
           <div className="w-full">
             <div className="mx-auto w-full max-w-md lg:max-w-lg">
               <div className="flex flex-col items-center mb-8 lg:hidden">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-                  <Leaf className="h-10 w-10 text-primary-foreground" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm overflow-hidden mb-4">
+                  <img src="/pwa-192x192.png" alt="Insumos Barrera" className="h-full w-full object-cover" />
                 </div>
                 <h1 className="text-2xl font-bold text-foreground">Insumos Barrera</h1>
                 <p className="text-muted-foreground">Sistema ERP</p>

@@ -54,8 +54,8 @@ const SidebarContent = ({
   <div className="flex h-full flex-col min-h-0">
     {/* Logo */}
     <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-        <Leaf className="h-6 w-6 text-primary-foreground" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm overflow-hidden">
+        <img src="/pwa-192x192.png" alt="Logo" className="h-full w-full object-cover" />
       </div>
       <div>
         <h1 className="text-lg font-bold text-foreground">Insumos Barrera</h1>
