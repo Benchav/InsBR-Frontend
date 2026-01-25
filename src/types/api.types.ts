@@ -27,3 +27,11 @@ export interface Stock {
 		// ... otros campos de producto
 	};
 }
+
+export interface Product {
+	id: string;
+	name: string;
+	categoryId?: string;
+	category?: string;
+	// ...otros campos existentes
+}

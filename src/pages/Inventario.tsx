@@ -57,7 +57,7 @@ export default function Inventario() {
   const [productForm, setProductForm] = useState({
     name: '',
     sku: '',
-    category: '',
+    categoryId: '',
     description: '',
     costPrice: 0,
     retailPrice: 0,
@@ -124,7 +124,7 @@ export default function Inventario() {
     setProductForm({
       name: '',
       sku: '',
-      category: '',
+      categoryId: '',
       description: '',
       costPrice: 0,
       retailPrice: 0,
@@ -179,7 +179,7 @@ export default function Inventario() {
     setProductForm({
       name: product.name,
       sku: product.sku,
-      category: product.category,
+      categoryId: product.categoryId || '',
       description: product.description || '',
       costPrice: toCurrency(product.costPrice),
       retailPrice: toCurrency(product.retailPrice),
@@ -581,13 +581,13 @@ function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
       </div>
       <div className="space-y-2">
         <Label>Categoría</Label>
-        <Select value={form.category} onValueChange={(val) => setForm({ ...form, category: val })}>
+        <Select value={form.categoryId} onValueChange={(val) => setForm({ ...form, categoryId: val })}>
           <SelectTrigger>
             <SelectValue placeholder={isLoading ? 'Cargando...' : 'Seleccionar...'} />
           </SelectTrigger>
           <SelectContent>
             {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
