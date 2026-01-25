@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: [
         "robots.txt",
-        "pwa-icon.svg",
+        "log-pwa.ico"
       ],
       manifest: {
         name: "InsBR",
@@ -32,9 +32,15 @@ export default defineConfig(({ mode }) => ({
         scope: "/",
         icons: [
           {
-            src: "/pwa-icon.svg",
-            sizes: "any",
-            type: "image/svg+xml",
+            src: "/log-pwa.ico",
+            sizes: "512x512",
+            type: "image/x-icon",
+            purpose: "any",
+          },
+          {
+            src: "/log-pwa.jpeg",
+            sizes: "512x512",
+            type: "image/jpeg",
             purpose: "any",
           },
         ],
