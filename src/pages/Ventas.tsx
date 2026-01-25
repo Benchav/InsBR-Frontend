@@ -237,6 +237,7 @@ export default function Ventas() {
 
   return (
     <DashboardLayout>
+
       <div className="flex flex-col gap-6 lg:flex-row lg:h-[calc(100vh-7rem)]">
         {/* Products Section */}
         <div className="flex-1 flex flex-col">
@@ -250,8 +251,21 @@ export default function Ventas() {
             </div>
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex flex-col gap-3 mb-4 sm:flex-row">
+          {/* Search and Filters Responsive */}
+          {/* Mobile: filtro apilado */}
+          <div className="flex flex-col gap-2 sm:hidden mb-4">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar productos por nombre o categoría..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 text-sm"
+              />
+            </div>
+          </div>
+          {/* Desktop: filtro en línea */}
+          <div className="hidden sm:flex flex-col gap-3 mb-4 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -278,8 +292,51 @@ export default function Ventas() {
             ))}
           </div>
 
-          {/* Product Grid */}
-          <div className="flex-1 overflow-auto">
+          {/* Product List Responsive */}
+          {/* Mobile: Cards */}
+          <div className="flex flex-col gap-2 sm:hidden">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+                No hay productos disponibles
+              </div>
+            ) : (
+              filteredProducts.map((product) => {
+                const cartItem = cart.find((item) => item.id === product.id);
+                const stock = getProductStock(product.id, currentBranchId);
+                const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
+                const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-JIN-001');
+                const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
+                return (
+                  <div
+                    key={product.id}
+                    className={cn(
+                      'rounded-lg border bg-background p-3 flex flex-col gap-1 shadow-sm cursor-pointer',
+                      cartItem && 'ring-2 ring-primary/60'
+                    )}
+                    onClick={() => addToCart(product)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground text-base">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.sku}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="secondary" className="text-xs mb-1">{product.category}</Badge>
+                        <Badge variant="outline" className="text-xs">{displayStock > 0 ? `Stock: ${displayStock}` : 'Sin stock'}</Badge>
+                      </div>
+                    </div>
+                    <div className="text-lg font-bold text-foreground mt-1">{formatCurrency(product.retailPrice)}</div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {/* Desktop: Table */}
+          <div className="hidden sm:block flex-1 overflow-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -287,76 +344,72 @@ export default function Ventas() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[620px]">
-                <thead className="sticky top-0 bg-background z-10">
-                  <tr className="border-b border-border">
-                    <th className="table-header text-left py-3 px-2">Producto</th>
-                    <th className="table-header text-center py-3 px-2">
-                      {currentBranchId === 'ALL' ? 'Stock Diriamba' : 'Stock'}
-                    </th>
-                    {currentBranchId === 'ALL' && (
-                      <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
-                    )}
-                    <th className="table-header text-right py-3 px-2">Precio Unit.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => {
-                    const cartItem = cart.find((item) => item.id === product.id);
-                    const stock = getProductStock(product.id, currentBranchId);
-
-                    // Specific stocks for columns
-                    const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
-                    const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-JIN-001');
-
-                    const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
-                    const isLowStock = displayStock < 10;
-
-                    return (
-                      <tr
-                        key={product.id}
-                        className={cn(
-                          'border-b border-border/50 cursor-pointer transition-colors',
-                          'hover:bg-primary/5 hover:ring-1 hover:ring-primary/30',
-                          cartItem && 'bg-primary/5'
-                        )}
-                        onClick={() => addToCart(product)}
-                        aria-selected={!!cartItem}
-                      >
-                        <td className="py-3 px-2">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                              <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                  <thead className="sticky top-0 bg-background z-10">
+                    <tr className="border-b border-border">
+                      <th className="table-header text-left py-3 px-2">Producto</th>
+                      <th className="table-header text-center py-3 px-2">
+                        {currentBranchId === 'ALL' ? 'Stock Diriamba' : 'Stock'}
+                      </th>
+                      {currentBranchId === 'ALL' && (
+                        <th className="table-header text-center py-3 px-2">Stock Jinotepe</th>
+                      )}
+                      <th className="table-header text-right py-3 px-2">Precio Unit.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => {
+                      const cartItem = cart.find((item) => item.id === product.id);
+                      const stock = getProductStock(product.id, currentBranchId);
+                      const stockDiriamba = getSpecificBranchStock(product.id, 'BRANCH-DIR-001');
+                      const stockJinotepe = getSpecificBranchStock(product.id, 'BRANCH-JIN-001');
+                      const displayStock = currentBranchId === 'ALL' ? stockDiriamba : stock;
+                      const isLowStock = displayStock < 10;
+                      return (
+                        <tr
+                          key={product.id}
+                          className={cn(
+                            'border-b border-border/50 cursor-pointer transition-colors',
+                            'hover:bg-primary/5 hover:ring-1 hover:ring-primary/30',
+                            cartItem && 'bg-primary/5'
+                          )}
+                          onClick={() => addToCart(product)}
+                          aria-selected={!!cartItem}
+                        >
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+                                <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{product.name}</p>
+                                <p className="text-xs text-muted-foreground">{product.sku}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-foreground">{product.name}</p>
-                              <p className="text-xs text-muted-foreground">{product.sku}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className={cn(
-                            'inline-flex items-center gap-1 text-sm font-medium',
-                            displayStock < 10 ? 'text-destructive' : 'text-success'
-                          )}>
-                            {displayStock}
-                          </span>
-                        </td>
-                        {currentBranchId === 'ALL' && (
+                          </td>
                           <td className="py-3 px-2 text-center">
                             <span className={cn(
                               'inline-flex items-center gap-1 text-sm font-medium',
-                              stockJinotepe < 10 ? 'text-destructive' : 'text-success'
+                              displayStock < 10 ? 'text-destructive' : 'text-success'
                             )}>
-                              {stockJinotepe}
+                              {displayStock}
                             </span>
                           </td>
-                        )}
-                        <td className="py-3 px-2 text-right font-medium">
-                          {formatCurrency(product.retailPrice)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          {currentBranchId === 'ALL' && (
+                            <td className="py-3 px-2 text-center">
+                              <span className={cn(
+                                'inline-flex items-center gap-1 text-sm font-medium',
+                                stockJinotepe < 10 ? 'text-destructive' : 'text-success'
+                              )}>
+                                {stockJinotepe}
+                              </span>
+                            </td>
+                          )}
+                          <td className="py-3 px-2 text-right font-medium">
+                            {formatCurrency(product.retailPrice)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -364,15 +417,26 @@ export default function Ventas() {
           </div>
         </div>
 
-        {/* Cart Section */}
-        <div className="w-full lg:w-96 flex flex-col">
+        {/* Cart Section Responsive */}
+        {/* Mobile: sticky bottom bar */}
+        <div className="sm:hidden fixed bottom-0 left-0 w-full z-30 p-2 bg-background border-t border-border">
+          <Button
+            className="w-full h-12"
+            disabled={cart.length === 0}
+            onClick={handleCheckout}
+          >
+            <ShoppingCart className="mr-2 h-5 w-5" />
+            Ver Carrito
+          </Button>
+        </div>
+        {/* Desktop: sidebar */}
+        <div className="hidden sm:flex w-full lg:w-96 flex-col">
           <Card className="flex-1 flex flex-col p-4 rounded-xl">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
               Resumen del Pedido
             </h2>
-
-            {/* Cart Items */}
+            {/* ...existing code for cart, discount, totals, actions... */}
             <div className="flex-1 overflow-auto space-y-3 mb-4">
               {cart.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
@@ -436,8 +500,6 @@ export default function Ventas() {
                 ))
               )}
             </div>
-
-            {/* Discount */}
             <div className="flex items-center gap-2 mb-4">
               <Percent className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Descuento:</span>
@@ -455,8 +517,6 @@ export default function Ventas() {
                 ))}
               </div>
             </div>
-
-            {/* Totals */}
             <div className="border-t border-border pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -473,8 +533,6 @@ export default function Ventas() {
                 <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </div>
-
-            {/* Actions */}
             <div className="mt-4 space-y-2">
               <Button
                 className="w-full h-12"
