@@ -22,9 +22,9 @@ export default defineConfig(({ mode }) => ({
         "log-pwa.ico"
       ],
       manifest: {
-        name: "InsBR",
-        short_name: "InsBR",
-        description: "InsBR Frontend",
+        name: "Insumos Barrera ERP",
+        short_name: "InsumosBarrera",
+        description: "Sistema de Gestión de Insumos Pasteleros",
         theme_color: "#0f172a",
         background_color: "#0f172a",
         display: "standalone",
@@ -32,16 +32,16 @@ export default defineConfig(({ mode }) => ({
         scope: "/",
         icons: [
           {
-            src: "/log-pwa.ico",
-            sizes: "512x512",
-            type: "image/x-icon",
-            purpose: "any",
+            src: "/pwa-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable",
           },
           {
-            src: "/log-pwa.jpeg",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
-            type: "image/jpeg",
-            purpose: "any",
+            type: "image/png",
+            purpose: "any maskable",
           },
         ],
       },
