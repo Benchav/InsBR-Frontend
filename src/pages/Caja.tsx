@@ -203,51 +203,80 @@ export default function Caja() {
             <div className="text-sm text-muted-foreground">{movements.length} movimientos</div>
           </div>
 
-          <div className="mt-4 rounded-md border overflow-x-auto">
-            <Table className="min-w-[720px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Referencia</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingMovements ? (
+          {/* Vista responsive: tarjetas en móvil, tabla en desktop */}
+          <div className="mt-4">
+            {/* Mobile: Cards */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              {isLoadingMovements ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">Cargando movimientos...</div>
+              ) : movements.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">No hay movimientos registrados</div>
+              ) : (
+                movements.map((movement) => (
+                  <div key={movement.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-base text-foreground truncate">{formatDateTime(movement.createdAt)}</span>
+                      <Badge variant={movement.type === 'INCOME' ? 'default' : 'destructive'}>
+                        {movement.type === 'INCOME' ? 'Ingreso' : 'Egreso'}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">{movement.reference || '—'}</div>
+                    <div className="font-medium text-foreground text-sm">{movement.description}</div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-muted-foreground">Monto</span>
+                      <span className="font-semibold text-base">{formatCurrency(movement.amount)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop: Table */}
+            <div className="hidden sm:block rounded-md border overflow-x-auto">
+              <Table className="min-w-[720px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      Cargando movimientos...
-                    </TableCell>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Referencia</TableHead>
+                    <TableHead className="text-right">Monto</TableHead>
                   </TableRow>
-                ) : movements.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      No hay movimientos registrados
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  movements.map((movement) => (
-                    <TableRow key={movement.id}>
-                      <TableCell className="text-muted-foreground">
-                        {formatDateTime(movement.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={movement.type === 'INCOME' ? 'default' : 'destructive'}>
-                          {movement.type === 'INCOME' ? 'Ingreso' : 'Egreso'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium text-foreground">{movement.description}</TableCell>
-                      <TableCell className="text-muted-foreground">{movement.reference || '—'}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(movement.amount)}
+                </TableHeader>
+                <TableBody>
+                  {isLoadingMovements ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        Cargando movimientos...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : movements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        No hay movimientos registrados
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movements.map((movement) => (
+                      <TableRow key={movement.id}>
+                        <TableCell className="text-muted-foreground">
+                          {formatDateTime(movement.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={movement.type === 'INCOME' ? 'default' : 'destructive'}>
+                            {movement.type === 'INCOME' ? 'Ingreso' : 'Egreso'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">{movement.description}</TableCell>
+                        <TableCell className="text-muted-foreground">{movement.reference || '—'}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(movement.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </Card>
       </div>
