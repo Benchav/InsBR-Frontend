@@ -1,11 +1,11 @@
 import { apiClient } from './client';
+import type { UserRole } from '@/types/api.types';
 
 export interface LoginRequest {
   username: string;
   password: string;
 }
 
-export type UserRole = 'ADMIN' | 'GERENTE' | 'CAJERO';
 
 export interface User {
   id: string; // Changed from userId to id to match common patterns, check backend usually uses id or _id. Based on mock usage it was id and userId. Let's standardize on id for frontend if backend returns userId we map it? Or assume backend returns id or userId. Let's look at getProfile response.

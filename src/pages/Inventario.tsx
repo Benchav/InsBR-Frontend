@@ -565,7 +565,10 @@ export default function Inventario() {
 }
 
 // Subcomponent for form fields to avoid duplication
+import { useCategories } from '../hooks/useCategories';
+
 function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
+  const { data: categories = [], isLoading } = useCategories();
   return (
     <div className="grid grid-cols-2 gap-4 py-4">
       <div className="space-y-2 col-span-2">
@@ -580,15 +583,12 @@ function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
         <Label>Categoría</Label>
         <Select value={form.category} onValueChange={(val) => setForm({ ...form, category: val })}>
           <SelectTrigger>
-            <SelectValue placeholder="Seleccionar..." />
+            <SelectValue placeholder={isLoading ? 'Cargando...' : 'Seleccionar...'} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="FERTILIZANTES">Fertilizantes</SelectItem>
-            <SelectItem value="HERBICIDAS">Herbicidas</SelectItem>
-            <SelectItem value="FUNGICIDAS">Fungicidas</SelectItem>
-            <SelectItem value="HERRAMIENTAS">Herramientas</SelectItem>
-            <SelectItem value="VETERINARIA">Veterinaria</SelectItem>
-            <SelectItem value="OTROS">Otros</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

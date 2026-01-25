@@ -43,7 +43,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authApi, User, UserRole } from '@/api/auth.api';
+import { authApi, User } from '@/api/auth.api';
+import type { UserRole } from '@/types/api.types';
 import { branchesApi } from '@/api/branches.api';
 import { BRANCHES } from '@/stores/branchStore';
 import { toast } from 'sonner';
