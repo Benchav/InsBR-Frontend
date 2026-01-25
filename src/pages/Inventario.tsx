@@ -270,7 +270,24 @@ export default function Inventario() {
       </Dialog>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-6">
+      {/* Mobile: filtros apilados */}
+      <div className="flex flex-col gap-2 sm:hidden mb-6">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre o SKU..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 text-sm"
+          />
+        </div>
+        <Button variant="outline" className="w-full">
+          <Filter className="mr-2 h-4 w-4" />
+          Filtrar
+        </Button>
+      </div>
+      {/* Desktop: filtros en línea */}
+      <div className="hidden sm:flex gap-3 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -383,9 +400,86 @@ export default function Inventario() {
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
+
+      {/* Responsive Inventory List */}
       <div className="kpi-card overflow-hidden p-0">
-        <div className="overflow-x-auto">
+        {/* Mobile: Cards */}
+        <div className="flex flex-col gap-3 sm:hidden">
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredInventory.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+              No hay productos registrados
+            </div>
+          ) : (
+            filteredInventory.map((item) => {
+              const stockDiriamba = getStockForBranch(item.id, 'BRANCH-DIR-001');
+              const stockJinotepe = getStockForBranch(item.id, 'BRANCH-JIN-001');
+              const productStocks = getProductStocks(item.id);
+              const total = productStocks.reduce((sum, s) => sum + s.quantity, 0);
+              return (
+                <div key={item.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-base font-semibold text-primary">
+                      {item.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-semibold text-base text-foreground truncate">{item.name}</span>
+                      <span className="text-xs text-muted-foreground truncate font-mono">{item.sku}</span>
+                    </div>
+                    <Badge variant="secondary" className="ml-auto">{item.category}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <span>Precio: <span className="font-medium text-foreground">{formatCurrency(item.retailPrice)}</span></span>
+                    <span className="ml-auto">Total: <span className="font-bold text-foreground">{total}</span></span>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    {showDiriamba && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn('flex-1', stockDiriamba < 10 ? 'border-destructive text-destructive' : '')}
+                        onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-DIR-001')}
+                        title="Ajustar stock Diriamba"
+                      >
+                        Diriamba: <span className="font-bold ml-1">{stockDiriamba}</span>
+                      </Button>
+                    )}
+                    {showJinotepe && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn('flex-1', stockJinotepe < 10 ? 'border-destructive text-destructive' : '')}
+                        onClick={() => openAdjustDialog(item.id, item.name, 'BRANCH-JIN-001')}
+                        title="Ajustar stock Jinotepe"
+                      >
+                        Jinotepe: <span className="font-bold ml-1">{stockJinotepe}</span>
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button variant="secondary" size="sm" className="flex-1" onClick={() => openEditDialog(item)}>
+                      <Edit className="h-4 w-4 mr-1" />Editar
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openAdjustDialog(item.id, item.name, currentBranchId === 'ALL' ? 'BRANCH-DIR-001' : currentBranchId)}
+                      title="Agregar stock manual"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-1" />Stock
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        {/* Desktop: Table */}
+        <div className="hidden sm:block overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
