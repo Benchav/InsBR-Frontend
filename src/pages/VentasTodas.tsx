@@ -158,7 +158,21 @@ export default function VentasTodas() {
         </div>
 
         <Card className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          {/* Mobile: filtros apilados */}
+          <div className="flex flex-col gap-2 sm:hidden">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por ID, cliente o usuario"
+                className="pl-10 text-sm"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">{filteredSales.length} ventas</div>
+          </div>
+          {/* Desktop: filtros en línea */}
+          <div className="hidden sm:flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -171,7 +185,76 @@ export default function VentasTodas() {
             <div className="text-sm text-muted-foreground">{filteredSales.length} ventas</div>
           </div>
 
-          <div className="mt-4 rounded-md border overflow-x-auto">
+          {/* Mobile: Cards */}
+          <div className="flex flex-col gap-3 mt-4 sm:hidden">
+            {isLoading ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+                Cargando ventas...
+              </div>
+            ) : filteredSales.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+                No hay ventas registradas
+              </div>
+            ) : (
+              filteredSales.map((sale) => (
+                <div key={sale.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-base text-foreground truncate">{sale.id}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'branch-badge',
+                        sale.branchId === 'BRANCH-DIR-001'
+                          ? 'branch-diriamba'
+                          : sale.branchId === 'BRANCH-JIN-001'
+                            ? 'branch-jinotepe'
+                            : ''
+                      )}
+                    >
+                      {getBranchLabel(sale.branchId)}
+                    </Badge>
+                    <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(sale.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <Badge variant={sale.type === 'CASH' ? 'default' : 'secondary'}>
+                      {sale.type === 'CASH' ? 'Contado' : 'Crédito'}
+                    </Badge>
+                    <Badge variant={(sale.status ?? 'ACTIVE') === 'ACTIVE' ? 'default' : 'destructive'}>
+                      {(sale.status ?? 'ACTIVE') === 'ACTIVE' ? 'Activa' : 'Cancelada'}
+                    </Badge>
+                    <span className="ml-auto">Ítems: <span className="font-bold text-foreground">{sale.items.length}</span></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Total:</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(sale.total)}</span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleDownloadTicket(sale.id)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Ticket
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setCancelTarget(sale.id)}
+                      disabled={!canCancelSale(sale) || cancelSaleMutation.isPending}
+                    >
+                      <Ban className="mr-2 h-4 w-4" />
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {/* Desktop: Table */}
+          <div className="hidden sm:block mt-4 rounded-md border overflow-x-auto">
             <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>

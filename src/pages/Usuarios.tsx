@@ -505,9 +505,32 @@ Esta acción NO se puede deshacer.`)) return;
         </div>
       </div>
 
-      {/* Users Grid */}
-      {/* ... keeping filters ... */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      {/* Users Filters Responsive */}
+      {/* Mobile: filtros apilados */}
+      <div className="flex flex-col gap-2 sm:hidden mb-6">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, usuario o correo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 text-sm"
+          />
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Rol" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los Roles</SelectItem>
+            <SelectItem value="ADMIN">Administrador</SelectItem>
+            <SelectItem value="GERENTE">Gerente</SelectItem>
+            <SelectItem value="CAJERO">Cajero</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {/* Desktop: filtros en línea */}
+      <div className="hidden sm:flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -539,92 +562,172 @@ Esta acción NO se puede deshacer.`)) return;
           <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Reintentar</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredUsers.map((user) => {
-            const roleConfig = getRoleConfig(user.role);
-            const RoleIcon = roleConfig.icon;
-            const userId = user.userId || user.id;
-
-            return (
-              <div key={userId} className="kpi-card relative">
-                <div className={cn(
-                  'absolute top-4 right-4 h-3 w-3 rounded-full',
-                  user.isActive ? 'bg-success' : 'bg-muted-foreground'
-                )} />
-
-                <div className="flex items-start gap-4 mb-4">
-                  <Avatar className="h-14 w-14">
-                    <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
-                      {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
-                    <p className="text-sm text-muted-foreground">@{user.username}</p>
-                    <span className={cn(
-                      'inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium',
-                      roleConfig.class
-                    )}>
-                      <RoleIcon className="h-3 w-3" />
-                      {roleConfig.label}
-                    </span>
+        <>
+          {/* Mobile: Cards apiladas */}
+          <div className="flex flex-col gap-4 sm:hidden">
+            {filteredUsers.map((user) => {
+              const roleConfig = getRoleConfig(user.role);
+              const RoleIcon = roleConfig.icon;
+              const userId = user.userId || user.id;
+              return (
+                <div key={userId} className="kpi-card relative">
+                  <div className={cn(
+                    'absolute top-4 right-4 h-3 w-3 rounded-full',
+                    user.isActive ? 'bg-success' : 'bg-muted-foreground'
+                  )} />
+                  <div className="flex items-start gap-4 mb-4">
+                    <Avatar className="h-14 w-14">
+                      <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+                        {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
+                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                      <span className={cn(
+                        'inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium',
+                        roleConfig.class
+                      )}>
+                        <RoleIcon className="h-3 w-3" />
+                        {roleConfig.label}
+                      </span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <Badge variant="outline" className={cn(
-                      'branch-badge',
-                      user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
-                        user.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
-                    )}>
-                      {user.branchId || 'Sin Sucursal'}
-                    </Badge>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <Badge variant="outline" className={cn(
+                        'branch-badge',
+                        user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
+                          user.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
+                      )}>
+                        {user.branchId || 'Sin Sucursal'}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-
-                <div className="text-xs text-muted-foreground border-t border-border pt-3 mb-3">
-                  <p>Último acceso: {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Nunca'}</p>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditClick(user)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
+                  <div className="text-xs text-muted-foreground border-t border-border pt-3 mb-3">
+                    <p>Último acceso: {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Nunca'}</p>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditClick(user)}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {user.isActive ? (
-                        <DropdownMenuItem onClick={() => handleDeactivate(user)}>
-                          <Key className="h-4 w-4 mr-2" />
-                          Desactivar usuario
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {user.isActive ? (
+                          <DropdownMenuItem onClick={() => handleDeactivate(user)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Desactivar usuario
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleReactivate(user)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Reactivar usuario
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar Usuario
                         </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={() => handleReactivate(user)}>
-                          <Key className="h-4 w-4 mr-2" />
-                          Reactivar usuario
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar Usuario
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+          {/* Desktop: Grid */}
+          <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredUsers.map((user) => {
+              const roleConfig = getRoleConfig(user.role);
+              const RoleIcon = roleConfig.icon;
+              const userId = user.userId || user.id;
+              return (
+                <div key={userId} className="kpi-card relative">
+                  <div className={cn(
+                    'absolute top-4 right-4 h-3 w-3 rounded-full',
+                    user.isActive ? 'bg-success' : 'bg-muted-foreground'
+                  )} />
+                  <div className="flex items-start gap-4 mb-4">
+                    <Avatar className="h-14 w-14">
+                      <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+                        {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
+                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                      <span className={cn(
+                        'inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium',
+                        roleConfig.class
+                      )}>
+                        <RoleIcon className="h-3 w-3" />
+                        {roleConfig.label}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <Badge variant="outline" className={cn(
+                        'branch-badge',
+                        user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
+                          user.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
+                      )}>
+                        {user.branchId || 'Sin Sucursal'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground border-t border-border pt-3 mb-3">
+                    <p>Último acceso: {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Nunca'}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditClick(user)}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {user.isActive ? (
+                          <DropdownMenuItem onClick={() => handleDeactivate(user)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Desactivar usuario
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleReactivate(user)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Reactivar usuario
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar Usuario
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       <div className="mt-6 text-sm text-muted-foreground">
