@@ -301,7 +301,33 @@ export default function Transferencias() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      {/* Mobile: filtros apilados */}
+      <div className="flex flex-col gap-2 sm:hidden mb-6">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por ID o sucursal..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 text-sm"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full">
+            <Filter className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los Estados</SelectItem>
+            <SelectItem value="PENDING">Pendiente</SelectItem>
+            <SelectItem value="IN_TRANSIT">En Tránsito</SelectItem>
+            <SelectItem value="COMPLETED">Completado</SelectItem>
+            <SelectItem value="CANCELLED">Cancelado</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {/* Desktop: filtros en línea */}
+      <div className="hidden sm:flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -326,9 +352,97 @@ export default function Transferencias() {
         </Select>
       </div>
 
-      {/* Transfers Table */}
+
+      {/* Responsive Transfers List */}
       <div className="kpi-card overflow-hidden p-0">
-        <div className="overflow-x-auto">
+        {/* Mobile: Cards */}
+        <div className="flex flex-col gap-3 sm:hidden">
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredTransfers.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+              No hay transferencias registradas
+            </div>
+          ) : (
+            filteredTransfers.map((transfer) => {
+              const statusConfig = getStatusConfig(transfer.status);
+              const StatusIcon = statusConfig.icon;
+              return (
+                <div key={transfer.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-base text-foreground truncate">{transfer.id}</span>
+                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', statusConfig.class)}>
+                      <StatusIcon className="h-3 w-3" />
+                      {statusConfig.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="outline" className={cn('branch-badge', transfer.fromBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
+                      {transfer.fromBranchId}
+                    </Badge>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <Badge variant="outline" className={cn('branch-badge', transfer.toBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
+                      {transfer.toBranchId}
+                    </Badge>
+                    <span className="ml-auto">{new Date(transfer.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-1">
+                    {transfer.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs">
+                        <Package className="h-3 w-3 text-muted-foreground" />
+                        <span>{item.productName || getProductName(item.productId)}</span>
+                        <Badge variant="secondary" className="text-xs">x{item.quantity}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <span>Solicitado por: <span className="font-medium text-foreground">{transfer.createdBy}</span></span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    {/* Actions Logic */}
+                    {transfer.status === 'PENDING' && (
+                      <>
+                        <Button
+                          variant="secondary" size="sm" className="flex-1 text-success border-success"
+                          onClick={() => approveTransferMutation.mutate(transfer.id)}
+                          disabled={approveTransferMutation.isPending}
+                        >
+                          Aprobar
+                        </Button>
+                        <Button
+                          variant="destructive" size="sm" className="flex-1"
+                          onClick={() => cancelTransferMutation.mutate(transfer.id)}
+                          disabled={cancelTransferMutation.isPending}
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+                    {transfer.status === 'IN_TRANSIT' && transfer.toBranchId === currentBranchId && (
+                      <Button
+                        variant="secondary" size="sm" className="flex-1 text-success border-success"
+                        onClick={() => completeTransferMutation.mutate(transfer.id)}
+                        disabled={completeTransferMutation.isPending}
+                      >
+                        Confirmar Recepción
+                      </Button>
+                    )}
+                    {transfer.status === 'IN_TRANSIT' && transfer.toBranchId !== currentBranchId && (
+                      <span className="text-xs text-muted-foreground flex-1">En tránsito</span>
+                    )}
+                    {(transfer.status === 'COMPLETED' || transfer.status === 'CANCELLED') && (
+                      <span className="text-xs text-muted-foreground flex-1">-</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        {/* Desktop: Table */}
+        <div className="hidden sm:block overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -392,7 +506,6 @@ export default function Transferencias() {
                           {/* Actions Logic */}
                           {transfer.status === 'PENDING' && (
                             <>
-                              {/* Approve implies "Shipping it" - usually done by Sender */}
                               <Button
                                 variant="ghost" size="sm" className="text-success hover:text-success/80 hover:bg-success/10"
                                 onClick={() => approveTransferMutation.mutate(transfer.id)}

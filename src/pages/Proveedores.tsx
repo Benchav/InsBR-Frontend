@@ -148,7 +148,21 @@ export default function Proveedores() {
         </div>
 
         <Card className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          {/* Mobile: filtros apilados */}
+          <div className="flex flex-col gap-4 sm:hidden">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por empresa o contacto"
+                className="pl-10 text-sm"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">{filteredSuppliers.length} proveedores</div>
+          </div>
+          {/* Desktop: filtros en línea */}
+          <div className="hidden sm:flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative w-full md:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -161,7 +175,54 @@ export default function Proveedores() {
             <div className="text-sm text-muted-foreground">{filteredSuppliers.length} proveedores</div>
           </div>
 
-          <div className="mt-4 rounded-md border overflow-x-auto">
+          {/* Mobile: Cards */}
+          <div className="flex flex-col gap-3 mt-4 sm:hidden">
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredSuppliers.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
+                No hay proveedores registrados
+              </div>
+            ) : (
+              filteredSuppliers.map((supplier) => (
+                <div key={supplier.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                      <Truck className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-semibold text-base text-foreground truncate">{supplier.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{supplier.taxId || 'Sin RUC'}</span>
+                    </div>
+                    <Badge variant={supplier.isActive ? 'default' : 'outline'} className="ml-auto">
+                      {supplier.isActive ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <span>Contacto: <span className="font-medium text-foreground">{supplier.contactName || 'Sin contacto'}</span></span>
+                    <span className="ml-auto">{supplier.email || 'Sin correo'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Tel: <span className="font-medium text-foreground">{supplier.phone || '-'}</span></span>
+                    <span className="ml-auto">Crédito: <span className="font-medium text-foreground">{supplier.creditDays ? `${supplier.creditDays} días` : 'Contado'}</span></span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button variant="secondary" size="sm" className="flex-1" onClick={() => openEdit(supplier)}>
+                      <Pencil className="h-4 w-4 mr-1" />Editar
+                    </Button>
+                    <Button variant="destructive" size="sm" className="flex-1" onClick={() => handleDelete(supplier)}>
+                      <Trash2 className="h-4 w-4 mr-1" />Eliminar
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="hidden sm:block mt-4 rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
