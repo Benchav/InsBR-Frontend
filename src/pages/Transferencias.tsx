@@ -51,7 +51,8 @@ export default function Transferencias() {
   // Data Fetching
   const { data: transfers = [], isLoading } = useQuery({
     queryKey: ['transfers', branchId],
-    queryFn: () => transferService.getAll({ branchId })
+    queryFn: () => transferService.getAll({ branchId }),
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   const { data: products = [] } = useQuery({
@@ -108,6 +109,7 @@ export default function Transferencias() {
   const inTransitCount = transfers.filter(t => t.status === 'IN_TRANSIT').length;
 
   const handleRefresh = () => {
+    // Invalidate all transfer queries to ensure fresh data
     queryClient.invalidateQueries({ queryKey: ['transfers'] });
   };
 
