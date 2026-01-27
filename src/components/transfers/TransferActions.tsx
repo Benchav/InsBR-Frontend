@@ -3,6 +3,7 @@ import { transferService } from '@/services/transferService';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface TransferActionsProps {
     transfer: Transfer;
@@ -24,13 +25,14 @@ export const TransferActions = ({ transfer, userBranchId, onAction }: TransferAc
             onAction();
         } catch (error) {
             console.error(error);
+            toast.error('Error al procesar la acción. Intente nuevamente.');
         } finally {
             setLoading(null);
         }
     };
 
     return (
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
             {/* Lógica de Aprobación (Solo para REQUEST) */}
             {transfer.status === 'REQUESTED' && isOrigin && (
                 <Button
@@ -80,6 +82,23 @@ export const TransferActions = ({ transfer, userBranchId, onAction }: TransferAc
                     {loading === 'cancel' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     🚫 Cancelar
                 </Button>
+            )}
+
+            {/* Feedback Pasivo (Cuando no hay acción requerida pero se espera algo) */}
+            {transfer.status === 'REQUESTED' && isDest && (
+                <span className="text-sm text-muted-foreground italic flex items-center gap-1">
+                    ⏳ Esperando aprobación
+                </span>
+            )}
+            {transfer.status === 'PENDING' && isDest && (
+                <span className="text-sm text-muted-foreground italic flex items-center gap-1">
+                    📦 Esperando envío
+                </span>
+            )}
+            {transfer.status === 'IN_TRANSIT' && isOrigin && (
+                <span className="text-sm text-muted-foreground italic flex items-center gap-1">
+                    🚚 En camino...
+                </span>
             )}
         </div>
     );
