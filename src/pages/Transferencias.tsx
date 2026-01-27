@@ -5,12 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Search, Filter, Plus, ArrowRight, Package, Clock, CheckCircle2, XCircle, Truck, Loader2, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, ArrowRight, Package, Clock, Truck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { transfersApi, Transfer, CreateTransferDto } from '@/api/transfers.api';
+import { transferService } from '@/services/transferService';
 import { productsApi } from '@/api/products.api';
 import { toast } from 'sonner';
+import { CreateTransferDto, TransferStatus } from '@/types/transfer';
+import { TransferActions } from '@/components/transfers/TransferActions';
+import { TransferStatusBadge } from '@/components/transfers/TransferStatusBadge';
 import {
   Dialog,
   DialogContent,
@@ -28,32 +31,17 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
-const getStatusConfig = (status: string) => {
-  switch (status) {
-    case 'COMPLETED':
-      return { label: 'Completado', icon: CheckCircle2, class: 'bg-success/10 text-success' };
-    case 'IN_TRANSIT':
-      return { label: 'En Tránsito', icon: Truck, class: 'bg-primary/10 text-primary' };
-    case 'PENDING':
-      return { label: 'Pendiente', icon: Clock, class: 'bg-warning/10 text-warning' };
-    case 'CANCELLED':
-      return { label: 'Cancelado', icon: XCircle, class: 'bg-destructive/10 text-destructive' };
-    default:
-      return { label: status, icon: Clock, class: 'bg-muted text-muted-foreground' };
-  }
-};
-
 export default function Transferencias() {
   const { currentBranchId } = useBranchStore();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Create Transfer State
   const [newTransfer, setNewTransfer] = useState<Partial<CreateTransferDto>>({
-    toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-JIN-001' : 'BRANCH-DIR-001', // Default opposite
+    toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-JIN-001' : 'BRANCH-DIR-001',
     items: [],
     notes: ''
   });
@@ -63,7 +51,7 @@ export default function Transferencias() {
   // Data Fetching
   const { data: transfers = [], isLoading } = useQuery({
     queryKey: ['transfers', branchId],
-    queryFn: () => transfersApi.getAll(branchId ? { branchId } : undefined)
+    queryFn: () => transferService.getAll({ branchId })
   });
 
   const { data: products = [] } = useQuery({
@@ -73,42 +61,14 @@ export default function Transferencias() {
 
   // Mutations
   const createTransferMutation = useMutation({
-    mutationFn: transfersApi.create,
+    mutationFn: transferService.create,
     onSuccess: () => {
-      toast.success('Solicitud de transferencia creada');
+      toast.success('Transferencia creada exitosamente');
       setIsDialogOpen(false);
       setNewTransfer({ items: [], notes: '', toBranchId: currentBranchId === 'BRANCH-DIR-001' ? 'BRANCH-JIN-001' : 'BRANCH-DIR-001' });
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
     },
     onError: () => toast.error('Error al crear transferencia')
-  });
-
-  const approveTransferMutation = useMutation({
-    mutationFn: transfersApi.approve,
-    onSuccess: () => {
-      toast.success('Transferencia aprobada (En Tránsito)');
-      queryClient.invalidateQueries({ queryKey: ['transfers'] });
-    },
-    onError: () => toast.error('Error al aprobar transferencia')
-  });
-
-  const completeTransferMutation = useMutation({
-    mutationFn: transfersApi.complete,
-    onSuccess: () => {
-      toast.success('Transferencia completada y stock actualizado');
-      queryClient.invalidateQueries({ queryKey: ['transfers'] });
-      queryClient.invalidateQueries({ queryKey: ['stocks'] }); // Stock changes
-    },
-    onError: () => toast.error('Error al completar transferencia')
-  });
-
-  const cancelTransferMutation = useMutation({
-    mutationFn: transfersApi.cancel,
-    onSuccess: () => {
-      toast.success('Transferencia cancelada');
-      queryClient.invalidateQueries({ queryKey: ['transfers'] });
-    },
-    onError: () => toast.error('Error al cancelar transferencia')
   });
 
   // Helpers
@@ -140,17 +100,16 @@ export default function Transferencias() {
       t.toBranchId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
 
-    // Also filter by current branch interaction (either source or dest, unless 'all')
-    const matchesBranch = currentBranchId === 'ALL' ||
-      t.fromBranchId === currentBranchId ||
-      t.toBranchId === currentBranchId;
-
-    return matchesSearch && matchesStatus && matchesBranch;
+    return matchesSearch && matchesStatus;
   });
 
   const pendingCount = transfers.filter(t => t.status === 'PENDING').length;
+  const requestedCount = transfers.filter(t => t.status === 'REQUESTED').length;
   const inTransitCount = transfers.filter(t => t.status === 'IN_TRANSIT').length;
-  const completedCount = transfers.filter(t => t.status === 'COMPLETED').length;
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['transfers'] });
+  };
 
   return (
     <DashboardLayout>
@@ -158,7 +117,7 @@ export default function Transferencias() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Transferencias de Inventario</h1>
-          <p className="text-muted-foreground">Gestión de movimientos entre sucursales</p>
+          <p className="text-muted-foreground">Sistema de envíos y solicitudes entre sucursales</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -169,9 +128,9 @@ export default function Transferencias() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Crear Nueva Transferencia</DialogTitle>
+              <DialogTitle>Nueva Transferencia / Solicitud</DialogTitle>
               <DialogDescription>
-                Solicita una transferencia de productos entre sucursales.
+                Si el origen es tu sucursal, será un <strong>ENVÍO</strong>. Si es otra, será una <strong>SOLICITUD</strong>.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -179,17 +138,16 @@ export default function Transferencias() {
                 <div className="space-y-2">
                   <Label>Sucursal Origen (Desde)</Label>
                   <Select
-                    value={currentBranchId}
+                    value={currentBranchId === 'ALL' ? undefined : currentBranchId}
                     disabled={true}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BRANCH-DIR-001">Diriamba</SelectItem>
                       <SelectItem value="BRANCH-JIN-001">Jinotepe</SelectItem>
-                      <SelectItem value="ALL">Global</SelectItem>
                     </SelectContent>
                   </Select>
-                  {currentBranchId === 'ALL' && <p className="text-xs text-destructive">Seleccione una sucursal arriba para iniciar transferencia.</p>}
+                  {currentBranchId === 'ALL' && <p className="text-xs text-destructive">Seleccione una sucursal arriba para iniciar.</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Sucursal Destino (Hacia)</Label>
@@ -209,7 +167,7 @@ export default function Transferencias() {
               </div>
 
               <div className="border rounded-md p-3 space-y-3 bg-muted/20">
-                <h4 className="font-medium text-sm">Productos a Transferir</h4>
+                <h4 className="font-medium text-sm">Productos</h4>
                 <div className="grid grid-cols-12 gap-2 items-end">
                   <div className="col-span-7 space-y-1">
                     <Label className="text-xs">Producto</Label>
@@ -248,7 +206,8 @@ export default function Transferencias() {
                             <td className="p-2 text-right">{item.quantity}</td>
                             <td className="p-2 text-center">
                               <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => removeItem(idx)}>
-                                <Trash2 className="h-3 w-3" />
+                                <span className="sr-only">Delete</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
                               </Button>
                             </td>
                           </tr>
@@ -267,7 +226,7 @@ export default function Transferencias() {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
               <Button onClick={() => createTransferMutation.mutate(newTransfer as any)} disabled={createTransferMutation.isPending || !newTransfer.toBranchId || (newTransfer.items?.length || 0) === 0}>
-                {createTransferMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {createTransferMutation.isPending && <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                 Crear Transferencia
               </Button>
             </div>
@@ -278,72 +237,47 @@ export default function Transferencias() {
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <KPICard
-          title="Pendientes de Aprobación"
-          value={isLoading ? "..." : `${pendingCount} Solicitudes`}
-          trendLabel="Requieren revisión"
-          icon={<Clock className="h-6 w-6 text-warning" />}
-          iconBgClass="bg-warning/10"
+          title="Solicitudes Nuevas"
+          value={isLoading ? "..." : `${requestedCount} Solicitudes`}
+          trendLabel="Requieren aprobación"
+          icon={<AlertCircle className="h-6 w-6 text-yellow-600" />}
+          iconBgClass="bg-yellow-100"
+        />
+        <KPICard
+          title="Listas para Envío"
+          value={isLoading ? "..." : `${pendingCount} Pendientes`}
+          trendLabel="Despachar mercadería"
+          icon={<Clock className="h-6 w-6 text-blue-600" />}
+          iconBgClass="bg-blue-100"
         />
         <KPICard
           title="En Tránsito"
-          value={isLoading ? "..." : `${inTransitCount} Transferencias`}
-          trendLabel="En camino entre sucursales"
-          icon={<Truck className="h-6 w-6 text-primary" />}
-          iconBgClass="bg-primary/10"
-        />
-        <KPICard
-          title="Completadas (Mes)"
-          value={isLoading ? "..." : `${completedCount} Transferencias`}
-          trendLabel="Total histórico"
-          icon={<CheckCircle2 className="h-6 w-6 text-success" />}
-          iconBgClass="bg-success/10"
+          value={isLoading ? "..." : `${inTransitCount} En camino`}
+          trendLabel="Esperando recepción"
+          icon={<Truck className="h-6 w-6 text-purple-600" />}
+          iconBgClass="bg-purple-100"
         />
       </div>
 
       {/* Filters */}
-      {/* Mobile: filtros apilados */}
-      <div className="flex flex-col gap-2 sm:hidden mb-6">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por ID o sucursal..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 text-sm"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los Estados</SelectItem>
-            <SelectItem value="PENDING">Pendiente</SelectItem>
-            <SelectItem value="IN_TRANSIT">En Tránsito</SelectItem>
-            <SelectItem value="COMPLETED">Completado</SelectItem>
-            <SelectItem value="CANCELLED">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {/* Desktop: filtros en línea */}
-      <div className="hidden sm:flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por ID o sucursal..."
+            placeholder="Buscar por ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos los Estados</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="REQUESTED">Solicitado</SelectItem>
             <SelectItem value="PENDING">Pendiente</SelectItem>
             <SelectItem value="IN_TRANSIT">En Tránsito</SelectItem>
             <SelectItem value="COMPLETED">Completado</SelectItem>
@@ -352,202 +286,90 @@ export default function Transferencias() {
         </Select>
       </div>
 
-
-      {/* Responsive Transfers List */}
-      <div className="kpi-card overflow-hidden p-0">
-        {/* Mobile: Cards */}
-        <div className="flex flex-col gap-3 sm:hidden">
+      {/* List */}
+      <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
+        {/* Mobile View */}
+        <div className="sm:hidden flex flex-col divide-y">
           {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <div className="p-8 text-center text-muted-foreground">Cargando...</div>
           ) : filteredTransfers.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground border rounded-md bg-background">
-              No hay transferencias registradas
-            </div>
+            <div className="p-8 text-center text-muted-foreground">No hay transferencias encontradas.</div>
           ) : (
-            filteredTransfers.map((transfer) => {
-              const statusConfig = getStatusConfig(transfer.status);
-              const StatusIcon = statusConfig.icon;
-              return (
-                <div key={transfer.id} className="rounded-lg border bg-background p-3 flex flex-col gap-2 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-base text-foreground truncate">{transfer.id}</span>
-                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', statusConfig.class)}>
-                      <StatusIcon className="h-3 w-3" />
-                      {statusConfig.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline" className={cn('branch-badge', transfer.fromBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
-                      {transfer.fromBranchId}
-                    </Badge>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant="outline" className={cn('branch-badge', transfer.toBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
-                      {transfer.toBranchId}
-                    </Badge>
-                    <span className="ml-auto">{new Date(transfer.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex flex-col gap-1 mt-1">
-                    {transfer.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-xs">
-                        <Package className="h-3 w-3 text-muted-foreground" />
-                        <span>{item.productName || getProductName(item.productId)}</span>
-                        <Badge variant="secondary" className="text-xs">x{item.quantity}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                    <span>Solicitado por: <span className="font-medium text-foreground">{transfer.createdBy}</span></span>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    {/* Actions Logic */}
-                    {transfer.status === 'PENDING' && (
-                      <>
-                        <Button
-                          variant="secondary" size="sm" className="flex-1 text-success border-success"
-                          onClick={() => approveTransferMutation.mutate(transfer.id)}
-                          disabled={approveTransferMutation.isPending}
-                        >
-                          Aprobar
-                        </Button>
-                        <Button
-                          variant="destructive" size="sm" className="flex-1"
-                          onClick={() => cancelTransferMutation.mutate(transfer.id)}
-                          disabled={cancelTransferMutation.isPending}
-                        >
-                          Cancelar
-                        </Button>
-                      </>
-                    )}
-                    {transfer.status === 'IN_TRANSIT' && transfer.toBranchId === currentBranchId && (
-                      <Button
-                        variant="secondary" size="sm" className="flex-1 text-success border-success"
-                        onClick={() => completeTransferMutation.mutate(transfer.id)}
-                        disabled={completeTransferMutation.isPending}
-                      >
-                        Confirmar Recepción
-                      </Button>
-                    )}
-                    {transfer.status === 'IN_TRANSIT' && transfer.toBranchId !== currentBranchId && (
-                      <span className="text-xs text-muted-foreground flex-1">En tránsito</span>
-                    )}
-                    {(transfer.status === 'COMPLETED' || transfer.status === 'CANCELLED') && (
-                      <span className="text-xs text-muted-foreground flex-1">-</span>
-                    )}
-                  </div>
+            filteredTransfers.map((t) => (
+              <div key={t.id} className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <span className="font-mono font-medium text-sm">{t.id}</span>
+                  <TransferStatusBadge status={t.status} />
                 </div>
-              );
-            })
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Badge variant="outline">{t.fromBranchId}</Badge>
+                  <ArrowRight className="h-3 w-3" />
+                  <Badge variant="outline">{t.toBranchId}</Badge>
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium mb-1">{t.items.length} Productos:</p>
+                  <ul className="list-disc list-inside text-muted-foreground pl-1">
+                    {t.items.slice(0, 2).map((i, idx) => (
+                      <li key={idx} className="truncate">{getProductName(i.productId)} (x{i.quantity})</li>
+                    ))}
+                    {t.items.length > 2 && <li>...</li>}
+                  </ul>
+                </div>
+                <div className="pt-2 border-t mt-1">
+                  <TransferActions transfer={t} userBranchId={currentBranchId || ''} onAction={handleRefresh} />
+                </div>
+              </div>
+            ))
           )}
         </div>
-        {/* Desktop: Table */}
+
+        {/* Desktop View */}
         <div className="hidden sm:block overflow-x-auto">
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="table-header text-left py-4 px-4">ID Transferencia</th>
-                  <th className="table-header text-left py-4 px-4">Ruta</th>
-                  <th className="table-header text-left py-4 px-4">Productos</th>
-                  <th className="table-header text-left py-4 px-4">Solicitado por</th>
-                  <th className="table-header text-left py-4 px-4">Fecha</th>
-                  <th className="table-header text-center py-4 px-4">Estado</th>
-                  <th className="table-header text-center py-4 px-4">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransfers.map((transfer) => {
-                  const statusConfig = getStatusConfig(transfer.status);
-                  const StatusIcon = statusConfig.icon;
-
-                  return (
-                    <tr key={transfer.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                      <td className="py-4 px-4 font-medium text-foreground">{transfer.id}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("branch-badge", transfer.fromBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
-                            {transfer.fromBranchId}
-                          </Badge>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          <Badge variant="outline" className={cn("branch-badge", transfer.toBranchId === 'BRANCH-DIR-001' ? 'branch-diriamba' : 'branch-jinotepe')}>
-                            {transfer.toBranchId}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="space-y-1">
-                          {transfer.items.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-sm">
-                              <Package className="h-3 w-3 text-muted-foreground" />
-                              <span>{item.productName || getProductName(item.productId)}</span>
-                              <Badge variant="secondary" className="text-xs">x{item.quantity}</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-muted-foreground">{transfer.createdBy}</td>
-                      <td className="py-4 px-4 text-sm text-muted-foreground">{new Date(transfer.createdAt).toLocaleDateString()}</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className={cn(
-                          'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium',
-                          statusConfig.class
-                        )}>
-                          <StatusIcon className="h-3 w-3" />
-                          {statusConfig.label}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {/* Actions Logic */}
-                          {transfer.status === 'PENDING' && (
-                            <>
-                              <Button
-                                variant="ghost" size="sm" className="text-success hover:text-success/80 hover:bg-success/10"
-                                onClick={() => approveTransferMutation.mutate(transfer.id)}
-                                disabled={approveTransferMutation.isPending}
-                              >
-                                Aprobar
-                              </Button>
-                              <Button
-                                variant="ghost" size="sm" className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                                onClick={() => cancelTransferMutation.mutate(transfer.id)}
-                                disabled={cancelTransferMutation.isPending}
-                              >
-                                Cancelar
-                              </Button>
-                            </>
-                          )}
-
-                          {transfer.status === 'IN_TRANSIT' && transfer.toBranchId === currentBranchId && (
-                            <Button
-                              variant="ghost" size="sm" className="text-success hover:text-success/80 hover:bg-success/10"
-                              onClick={() => completeTransferMutation.mutate(transfer.id)}
-                              disabled={completeTransferMutation.isPending}
-                            >
-                              Confirmar Recepción
-                            </Button>
-                          )}
-
-                          {transfer.status === 'IN_TRANSIT' && transfer.toBranchId !== currentBranchId && (
-                            <span className="text-xs text-muted-foreground">En tránsito</span>
-                          )}
-
-                          {(transfer.status === 'COMPLETED' || transfer.status === 'CANCELLED') && (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b">
+              <tr>
+                <th className="px-4 py-3">ID / Fecha</th>
+                <th className="px-4 py-3">Ruta</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Items</th>
+                <th className="px-4 py-3">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {isLoading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center">Cargando...</td></tr>
+              ) : filteredTransfers.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No hay transferencias.</td></tr>
+              ) : (
+                filteredTransfers.map((t) => (
+                  <tr key={t.id} className="hover:bg-muted/5">
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{t.id}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(t.createdAt).toLocaleDateString()}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{t.fromBranchId}</Badge>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        <Badge variant="outline" className="text-xs">{t.toBranchId}</Badge>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <TransferStatusBadge status={t.status} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="max-w-[200px] truncate text-muted-foreground" title={t.items.map(i => `${getProductName(i.productId)} x${i.quantity}`).join(', ')}>
+                        {t.items.length} items ({t.items.reduce((acc, i) => acc + i.quantity, 0)} unid.)
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <TransferActions transfer={t} userBranchId={currentBranchId || ''} onAction={handleRefresh} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </DashboardLayout>
