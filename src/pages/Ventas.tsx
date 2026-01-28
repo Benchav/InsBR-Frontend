@@ -161,7 +161,9 @@ export default function Ventas() {
     },
     onError: (error) => {
       console.error('Sale error:', error);
-      toast.error('Error al procesar la venta');
+      const errorData = (error as any).response?.data;
+      const errorMessage = errorData?.error || errorData?.message || (typeof errorData === 'string' ? errorData : JSON.stringify(errorData)) || 'Error al procesar la venta';
+      toast.error(`Error: ${errorMessage}`);
     }
   });
 

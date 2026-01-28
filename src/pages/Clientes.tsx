@@ -401,6 +401,7 @@ export default function Clientes() {
                   onFocus={(e) => e.target.select()}
                   placeholder="0.00"
                 />
+                <p className="text-xs text-muted-foreground">Ingrese el monto en Córdobas (C$)</p>
               </div>
               <div className="space-y-2 flex items-center gap-2 pt-8">
                 <div className="flex items-center space-x-2">
