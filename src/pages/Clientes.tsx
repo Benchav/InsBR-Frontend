@@ -68,7 +68,12 @@ export default function Clientes() {
       setFormData(defaultForm);
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
-    onError: () => toast.error('Error al crear cliente'),
+    onError: (error) => {
+      console.error(error);
+      const errorData = (error as any).response?.data;
+      const errorMessage = typeof errorData === 'string' ? errorData : JSON.stringify(errorData) || 'Error al crear cliente';
+      toast.error(`Error al crear cliente: ${errorMessage}`);
+    },
   });
 
   const updateMutation = useMutation({
@@ -118,10 +123,21 @@ export default function Clientes() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+
+    const cleanData: any = {
+      ...formData,
+      contactName: formData.contactName || undefined,
+      phone: formData.phone || undefined,
+      email: formData.email || undefined,
+      address: formData.address || undefined,
+      taxId: formData.taxId || undefined,
+      creditLimit: formData.creditLimit || 0
+    };
+
     if (editingCustomer) {
-      updateMutation.mutate({ id: editingCustomer.id, data: formData });
+      updateMutation.mutate({ id: editingCustomer.id, data: cleanData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(cleanData);
     }
   };
 
