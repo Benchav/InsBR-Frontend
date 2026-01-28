@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi, Product } from '@/api/products.api';
 import { stockApi } from '@/api/stock.api';
 import { toCurrency, toCents, formatCurrency } from '@/utils/formatters';
+import { useCategories } from '@/hooks/useCategories';
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ export default function Inventario() {
     description: '',
     costPrice: 0,
     retailPrice: 0,
+    wholesalePrice: 0,
     unit: 'UNIDAD',
     isActive: true
   });
@@ -103,7 +105,9 @@ export default function Inventario() {
     },
     onError: (error) => {
       console.error(error);
-      toast.error('Error al crear producto');
+      const errorData = (error as any).response?.data;
+      const errorMessage = typeof errorData === 'string' ? errorData : JSON.stringify(errorData) || 'Error al crear producto';
+      toast.error(`Error al crear producto: ${errorMessage}`);
     }
   });
 
@@ -131,6 +135,7 @@ export default function Inventario() {
       description: '',
       costPrice: 0,
       retailPrice: 0,
+      wholesalePrice: 0,
       unit: 'UNIDAD',
       isActive: true
     });
@@ -186,17 +191,30 @@ export default function Inventario() {
       description: product.description || '',
       costPrice: toCurrency(product.costPrice),
       retailPrice: toCurrency(product.retailPrice),
+      wholesalePrice: toCurrency(product.wholesalePrice || 0),
       unit: product.unit,
       isActive: product.isActive
     });
     setIsEditDialogOpen(true);
   };
 
+  const { data: categories = [] } = useCategories();
+
   const handleSaveProduct = (isEdit: boolean) => {
+    if (productForm.wholesalePrice < productForm.costPrice) {
+      toast.error('El precio mayorista no puede ser menor al precio de costo');
+      return;
+    }
+
+    const selectedCategory = categories.find(c => c.id === productForm.categoryId);
+    const categoryName = selectedCategory ? selectedCategory.name : '';
+
     const payload = {
       ...productForm,
+      category: categoryName,
       costPrice: toCents(productForm.costPrice),
-      retailPrice: toCents(productForm.retailPrice)
+      retailPrice: toCents(productForm.retailPrice),
+      wholesalePrice: toCents(productForm.wholesalePrice)
     };
 
     if (isEdit && editingProduct) {
@@ -249,7 +267,7 @@ export default function Inventario() {
           <ProductFormContent form={productForm} setForm={setProductForm} />
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={() => handleSaveProduct(false)} disabled={createProductMutation.isPending || !productForm.name || !productForm.sku}>
+            <Button onClick={() => handleSaveProduct(false)} disabled={createProductMutation.isPending || !productForm.name || !productForm.sku || !productForm.categoryId}>
               {createProductMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Guardar Producto
             </Button>
@@ -582,7 +600,7 @@ export default function Inventario() {
 }
 
 // Subcomponent for form fields to avoid duplication
-import { useCategories } from '../hooks/useCategories';
+
 
 function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
   const { data: categories = [], isLoading } = useCategories();
@@ -616,6 +634,10 @@ function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
       <div className="space-y-2">
         <Label>Precio Venta (C$)</Label>
         <Input type="number" step="0.01" value={form.retailPrice} onChange={(e) => setForm({ ...form, retailPrice: parseFloat(e.target.value) || 0 })} />
+      </div>
+      <div className="space-y-2">
+        <Label>Precio Mayorista (C$)</Label>
+        <Input type="number" step="0.01" value={form.wholesalePrice} onChange={(e) => setForm({ ...form, wholesalePrice: parseFloat(e.target.value) || 0 })} />
       </div>
       <div className="space-y-2 col-span-2">
         <Label>Descripción</Label>

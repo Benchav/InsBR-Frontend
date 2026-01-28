@@ -20,6 +20,7 @@ export interface CreateProductDto {
   description: string;
   sku: string;
   category: string;
+  categoryId?: string;
   costPrice: number;
   retailPrice: number;
   wholesalePrice: number;

@@ -101,7 +101,7 @@ export default function AdminCategorias() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4 px-2 sm:px-4 md:gap-6 md:px-0 w-full max-w-3xl mx-auto">
+      <div className="flex flex-col gap-4 px-2 sm:px-4 md:gap-6 md:px-0 w-full max-w-6xl mx-auto">
         {/* Header y botón */}
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4 w-full">
           <div>
@@ -170,7 +170,7 @@ export default function AdminCategorias() {
                     filteredCategories.map(cat => (
                       <TableRow key={cat.id}>
                         <TableCell className="max-w-[120px] truncate">{cat.name}</TableCell>
-                        <TableCell className="max-w-[180px] truncate">{cat.description || '—'}</TableCell>
+                        <TableCell className="whitespace-normal">{cat.description || '—'}</TableCell>
                         <TableCell>{cat.isActive ? 'Activo' : 'Inactivo'}</TableCell>
                         <TableCell className="flex flex-col gap-2 sm:flex-row sm:gap-2">
                           <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openEdit(cat)}>Editar</Button>
