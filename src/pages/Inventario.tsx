@@ -629,15 +629,33 @@ function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
       </div>
       <div className="space-y-2">
         <Label>Precio Costo (C$)</Label>
-        <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })} />
+        <Input
+          type="number"
+          step="0.01"
+          value={form.costPrice || ''}
+          onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })}
+          placeholder="0.00"
+        />
       </div>
       <div className="space-y-2">
         <Label>Precio Venta (C$)</Label>
-        <Input type="number" step="0.01" value={form.retailPrice} onChange={(e) => setForm({ ...form, retailPrice: parseFloat(e.target.value) || 0 })} />
+        <Input
+          type="number"
+          step="0.01"
+          value={form.retailPrice || ''}
+          onChange={(e) => setForm({ ...form, retailPrice: parseFloat(e.target.value) || 0 })}
+          placeholder="0.00"
+        />
       </div>
       <div className="space-y-2">
         <Label>Precio Mayorista (C$)</Label>
-        <Input type="number" step="0.01" value={form.wholesalePrice} onChange={(e) => setForm({ ...form, wholesalePrice: parseFloat(e.target.value) || 0 })} />
+        <Input
+          type="number"
+          step="0.01"
+          value={form.wholesalePrice || ''}
+          onChange={(e) => setForm({ ...form, wholesalePrice: parseFloat(e.target.value) || 0 })}
+          placeholder="0.00"
+        />
       </div>
       <div className="space-y-2 col-span-2">
         <Label>Descripción</Label>
