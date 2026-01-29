@@ -29,6 +29,7 @@ import { salesApi } from '@/api/sales.api';
 import { customersApi } from '@/api/customers.api';
 import { stockApi, Stock } from '@/api/stock.api';
 import { formatCurrency, toCents } from '@/utils/formatters';
+import { CategoryService } from '@/services/categoryService';
 
 interface CartItem {
   id: string;
@@ -37,8 +38,6 @@ interface CartItem {
   quantity: number;
   sku: string;
 }
-
-const categories = ['Todos', 'Fertilizantes', 'Semillas', 'Herbicidas', 'Fungicidas', 'Veterinaria', 'Otros'];
 
 export default function Ventas() {
   const { currentBranchId, getCurrentBranch } = useBranchStore();
@@ -61,6 +60,13 @@ export default function Ventas() {
     queryKey: ['stocks', branchId],
     queryFn: () => stockApi.getMyBranchStock(branchId ? { branchId } : undefined),
   });
+
+  const { data: categoriesData = [], isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: CategoryService.getAll,
+  });
+
+  const categories = ['Todos', ...categoriesData.filter(c => c.isActive).map(c => c.name)];
 
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -228,7 +234,7 @@ export default function Ventas() {
     return matchesSearch && matchesCategory && hasStock;
   });
 
-  const isLoading = isLoadingProducts || isLoadingStocks;
+  const isLoading = isLoadingProducts || isLoadingStocks || isLoadingCategories;
 
   // Assuming fixed branch IDs based on store mapping
   // but ideally should be dynamic. The store hardcodes them.
@@ -238,7 +244,7 @@ export default function Ventas() {
 
       <div className="flex flex-col gap-6 lg:flex-row lg:h-[calc(100vh-7rem)]">
         {/* Products Section */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -276,7 +282,7 @@ export default function Ventas() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          <div className="flex flex-wrap gap-2 mb-4 pb-2">
             {categories.map((cat) => (
               <Button
                 key={cat}
@@ -414,7 +420,7 @@ export default function Ventas() {
           </Button>
         </div>
         {/* Desktop: sidebar */}
-        <div className="hidden sm:flex w-full lg:w-96 flex-col">
+        <div className="hidden sm:flex w-full lg:w-80 xl:w-96 flex-col">
           <Card className="flex-1 flex flex-col p-4 rounded-xl">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
