@@ -26,6 +26,7 @@ import { formatCurrency, toCents } from '@/utils/formatters';
 import { CategoryService } from '@/services/categoryService';
 import { UnitConversion } from '@/types/units.types';
 import { UnitSelector } from '@/components/units/UnitSelector';
+import { StockValidator } from '@/components/units/StockValidator';
 import { ConversionCalculator } from '@/components/units/ConversionCalculator';
 
 interface CartItem {
@@ -454,6 +455,15 @@ export default function Ventas() {
                           quantity={item.quantity}
                         />
                       )}
+                    </div>
+
+                    <div className="mt-1 px-1">
+                      <StockValidator
+                        productId={item.id}
+                        unitId={item.unitId}
+                        quantity={item.quantity}
+                        currentStock={getProductStock(item.id, currentBranchId)}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between gap-2 mt-2">
