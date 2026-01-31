@@ -11,6 +11,9 @@ import { purchasesApi, CreatePurchaseDto, Purchase } from '@/api/purchases.api';
 import { productsApi } from '@/api/products.api';
 import { suppliersApi } from '@/api/suppliers.api';
 import { formatCurrency, formatDateTime, toCents, toCurrency } from '@/utils/formatters';
+import { UnitSelector } from '@/components/units/UnitSelector';
+import { ConversionCalculator } from '@/components/units/ConversionCalculator';
+import { UnitConversion } from '@/types/units.types';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -63,6 +66,7 @@ export default function Compras() {
 
   // Item adding state
   const [selectedProduct, setSelectedProduct] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<UnitConversion | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [unitCost, setUnitCost] = useState('');
 
@@ -144,7 +148,10 @@ export default function Compras() {
       productName: product.name,
       quantity: quantity,
       unitCost: toCents(unitCostValue),
-      subtotal: quantity * toCents(unitCostValue)
+      subtotal: quantity * toCents(unitCostValue),
+      unitId: selectedUnit?.id,
+      unitName: selectedUnit?.unitName,
+      unitSymbol: selectedUnit?.unitSymbol
     };
 
     setNewPurchase(prev => ({
@@ -154,6 +161,7 @@ export default function Compras() {
 
     // Reset item inputs
     setSelectedProduct('');
+    setSelectedUnit(null);
     setQuantity(1);
     setUnitCost('');
   };
@@ -328,20 +336,41 @@ export default function Compras() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">Unidad</Label>
+                      <UnitSelector
+                        productId={selectedProduct}
+                        filterMode="ALL"
+                        selectedUnitId={selectedUnit?.id}
+                        onUnitChange={setSelectedUnit}
+                        disabled={!selectedProduct}
+                      />
+                    </div>
+
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Cant.</Label>
                       <Input
                         type="number"
                         className="h-8 text-xs"
-                        min="1"
+                        min="0.01"
+                        step="0.01"
                         value={Number.isFinite(quantity) ? quantity : ''}
                         onChange={(e) => {
                           const val = e.target.value;
                           setQuantity(val === '' ? 0 : Number(val));
                         }}
                       />
+                      {selectedUnit && (
+                        <div className="-mt-1">
+                          <ConversionCalculator
+                            productId={selectedProduct}
+                            fromUnitId={selectedUnit.id}
+                            quantity={quantity}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="col-span-3 space-y-1">
+                    <div className="col-span-2 space-y-1">
                       <Label className="text-xs">Costo Unit.</Label>
                       <Input
                         type="number"

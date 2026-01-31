@@ -6,6 +6,12 @@ export interface SaleItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+
+  // Optional Unit Fields
+  unitId?: string;
+  unitName?: string;
+  unitSymbol?: string;
+  baseQuantity?: number;
 }
 
 export interface Sale {
@@ -38,6 +44,10 @@ export interface CreateSaleDto {
     productId: string;
     quantity: number;
     unitPrice: number;
+    unitId?: string;
+    unitName?: string;
+    unitSymbol?: string;
+    baseQuantity?: number;
   }>;
   notes?: string;
 }

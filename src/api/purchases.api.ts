@@ -6,6 +6,12 @@ export interface PurchaseItem {
   quantity: number;
   unitCost: number;
   subtotal: number;
+
+  // Optional Unit Fields
+  unitId?: string;
+  unitName?: string;
+  unitSymbol?: string;
+  baseQuantity?: number;
 }
 
 export interface Purchase {

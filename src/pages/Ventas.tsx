@@ -30,6 +30,8 @@ import { customersApi } from '@/api/customers.api';
 import { stockApi, Stock } from '@/api/stock.api';
 import { formatCurrency, toCents } from '@/utils/formatters';
 import { CategoryService } from '@/services/categoryService';
+import { UnitSelector } from '@/components/units/UnitSelector';
+import { ConversionCalculator } from '@/components/units/ConversionCalculator';
 
 interface CartItem {
   id: string;
@@ -37,6 +39,10 @@ interface CartItem {
   price: number;
   quantity: number;
   sku: string;
+  // Unit Fields
+  unitId?: string;
+  unitName?: string;
+  unitSymbol?: string;
 }
 
 export default function Ventas() {
@@ -75,7 +81,9 @@ export default function Ventas() {
 
   const [discount, setDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
+  const [salesType, setSalesType] = useState<'RETAIL' | 'WHOLESALE'>('RETAIL'); // New State
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerName, setCustomerName] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
@@ -85,43 +93,88 @@ export default function Ventas() {
   // Cart Logic
   const addToCart = (product: Product) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      // Find exact match (same product AND same unit)
+      // Since units are added *after* adding to cart in this flow, initially we look for product with no unit
+      // BUT if we want to support multiple units of same product, checking only by ID is tricky if we don't have unit yet.
+      // Strategy: Add as base product (no unit). User then selects unit.
+      // If user adds same product again, we increment the one with "no unit" or just list it again?
+      // Simplification: Check for existing item with SAME unitId (which acts as undefined initially)
+
+      const existing = prev.find((item) => item.id === product.id && item.unitId === undefined);
+
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          (item.id === product.id && item.unitId === undefined) ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prev, {
         id: product.id,
         name: product.name,
-        price: product.retailPrice,
+        price: salesType === 'RETAIL' ? product.retailPrice : product.wholesalePrice, // Initial price based on sales type
         quantity: 1,
-        sku: product.sku
+        sku: product.sku,
+        unitId: undefined
       }];
     });
   };
 
-  const setQuantity = (id: string, quantity: number) => {
-    const safeQuantity = Math.max(0, Math.floor(quantity));
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === id);
-      if (!existing && safeQuantity > 0) {
-        return prev;
+  const updateItemUnit = (index: number, unit: any | null) => {
+    setCart(prev => {
+      const newCart = [...prev];
+      const item = newCart[index];
+
+      if (unit) {
+        // Determine price: Unit specific price OR calculated from conversion factor?
+        // The API returns retailPrice/wholesalePrice directly on the unit object if set.
+        const newPrice = salesType === 'RETAIL'
+          ? (unit.retailPrice ?? item.price) // Fallback to current if missing (should not happen if configured right) or maybe we need a fetch
+          : (unit.wholesalePrice ?? item.price);
+
+        newCart[index] = {
+          ...item,
+          unitId: unit.id,
+          unitName: unit.unitName,
+          unitSymbol: unit.unitSymbol,
+          price: newPrice
+        };
+      } else {
+        // Revert to product base price
+        const originalProduct = products.find(p => p.id === item.id);
+        if (originalProduct) {
+          newCart[index] = {
+            ...item,
+            unitId: undefined,
+            unitName: undefined,
+            unitSymbol: undefined,
+            price: salesType === 'RETAIL' ? originalProduct.retailPrice : originalProduct.wholesalePrice
+          };
+        }
       }
-      return prev
-        .map((item) => (item.id === id ? { ...item, quantity: safeQuantity } : item))
-        .filter((item) => item.quantity > 0);
+      return newCart;
     });
   };
 
-  const updateQuantity = (id: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) =>
-          item.id === id ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
+  const setQuantity = (index: number, quantity: number) => {
+    const safeQuantity = Math.max(0, quantity); // Allow decimals
+    setCart((prev) => {
+      const newCart = [...prev];
+      if (safeQuantity <= 0) {
+        // Remove item
+        return newCart.filter((_, i) => i !== index);
+      }
+      newCart[index] = { ...newCart[index], quantity: safeQuantity };
+      return newCart;
+    });
+  };
+
+  const updateQuantity = (index: number, delta: number) => {
+    setCart((prev) => {
+      const newCart = [...prev];
+      const newQty = Math.max(0, newCart[index].quantity + delta);
+      if (newQty === 0) return newCart.filter((_, i) => i !== index);
+      newCart[index].quantity = newQty;
+      return newCart;
+    });
   };
 
   const clearCart = () => {
@@ -196,7 +249,10 @@ export default function Ventas() {
         return {
           productId: item.id,
           quantity: item.quantity,
-          unitPrice: discountedUnitPrice
+          unitPrice: discountedUnitPrice,
+          unitId: item.unitId,
+          unitName: item.unitName,
+          unitSymbol: item.unitSymbol
         };
       }),
       type: paymentMethod,
@@ -252,6 +308,26 @@ export default function Ventas() {
               <p className="text-sm text-muted-foreground">
                 Vendiendo desde: <span className="font-medium text-primary">{currentBranch.name}</span>
               </p>
+            </div>
+            {/* Sales Type Toggle */}
+            <div className="flex rounded-md shadow-sm border border-input">
+              <Button
+                variant={salesType === 'RETAIL' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-r-none h-8"
+                onClick={() => setSalesType('RETAIL')}
+              >
+                Menudeo
+              </Button>
+              <div className="w-px bg-border"></div>
+              <Button
+                variant={salesType === 'WHOLESALE' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-l-none h-8"
+                onClick={() => setSalesType('WHOLESALE')}
+              >
+                Mayoreo
+              </Button>
             </div>
           </div>
 
@@ -437,7 +513,25 @@ export default function Ventas() {
                   <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
+
+                      <div className="my-1">
+                        <UnitSelector
+                          productId={item.id}
+                          salesType={salesType}
+                          selectedUnitId={item.unitId}
+                          onUnitChange={(unit) => updateItemUnit(index, unit)}
+                        />
+                      </div>
+
+                      {item.unitId && (
+                        <ConversionCalculator
+                          productId={item.id}
+                          fromUnitId={item.unitId}
+                          quantity={item.quantity}
+                        />
+                      )}
+
+                      <p className="text-xs text-muted-foreground mt-1">
                         {formatCurrency(item.price)} c/u
                       </p>
                       <div className="mt-2 flex items-center gap-2">
