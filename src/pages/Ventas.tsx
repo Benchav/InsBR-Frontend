@@ -81,7 +81,7 @@ export default function Ventas() {
 
   const [discount, setDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
   const [salesType, setSalesType] = useState<'RETAIL' | 'WHOLESALE'>('RETAIL'); // New State
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
