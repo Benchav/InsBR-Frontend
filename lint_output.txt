@@ -1,0 +1,131 @@
+﻿
+> vite_react_shadcn_ts@0.0.0 lint
+> eslint .
+
+
+C:\Users\joshu\Downloads\insbr-frontend\dev-dist\workbox-5a5d9309.js
+    69:7   error    Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+   436:5   error    Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+   452:5   warning  Unused eslint-disable directive (no problems were reported)
+   769:11  error    Definition for rule '@typescript-eslint/no-unsafe-member-access' was not found  @typescript-eslint/no-unsafe-member-access
+   771:13  error    Definition for rule '@typescript-eslint/no-unsafe-assignment' was not found     @typescript-eslint/no-unsafe-assignment
+   965:11  error    Definition for rule '@typescript-eslint/no-unsafe-assignment' was not found     @typescript-eslint/no-unsafe-assignment
+   981:13  error    Definition for rule '@typescript-eslint/no-unsafe-assignment' was not found     @typescript-eslint/no-unsafe-assignment
+   987:13  warning  Unused eslint-disable directive (no problems were reported)
+  1406:11  warning  Unused eslint-disable directive (no problems were reported)
+  1665:5   error    Definition for rule '@typescript-eslint/ban-types' was not found                @typescript-eslint/ban-types
+  2062:35  warning  Unused eslint-disable directive (no problems were reported)
+  2793:9   error    Definition for rule '@typescript-eslint/no-unsafe-return' was not found         @typescript-eslint/no-unsafe-return
+  2840:9   error    Definition for rule '@typescript-eslint/no-unsafe-return' was not found         @typescript-eslint/no-unsafe-return
+
+C:\Users\joshu\Downloads\insbr-frontend\src\api\auth.api.ts
+  66:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  89:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\api\branches.api.ts
+  19:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\api\customers.api.ts
+  30:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\joshu\Downloads\insbr-frontend\src\api\suppliers.api.ts
+  30:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\AppInstallPrompt.tsx
+  5:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  9:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\layout\TopBar.tsx
+  70:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\transfers\TransferActions.tsx
+  21:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\button.tsx
+  47:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\command.tsx
+  24:11  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\textarea.tsx
+  5:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\components\units\UnitSelector.tsx
+  69:8  warning  React Hook useEffect has missing dependencies: 'filterMode', 'onUnitChange', and 'selectedUnitId'. Either include them or remove the dependency array. If 'onUnitChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+C:\Users\joshu\Downloads\insbr-frontend\src\config\navigation.config.ts
+  20:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\contexts\AuthContext.tsx
+  82:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\AdminCategorias.tsx
+  27:21  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  39:7   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Clientes.tsx
+   73:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Compras.tsx
+  113:28   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  132:28   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  210:87   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  294:124  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  305:144  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Creditos.tsx
+  59:9  warning  The 'credits' conditional could make the dependencies of useMemo Hook (at line 72) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'credits' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\CuentasPorPagar.tsx
+  107:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  153:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:91  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Inventario.tsx
+  108:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  115:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  223:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  605:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  605:70  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\InventoryPage.tsx
+  15:8  warning  React Hook useEffect has a missing dependency: 'loadStock'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Login.tsx
+  25:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Transferencias.tsx
+  230:83  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Usuarios.tsx
+  185:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\src\pages\Ventas.tsx
+  121:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  223:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\joshu\Downloads\insbr-frontend\tailwind.config.ts
+  119:13  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+Ô£û 59 problems (43 errors, 16 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+

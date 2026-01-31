@@ -30,6 +30,7 @@ import { customersApi } from '@/api/customers.api';
 import { stockApi, Stock } from '@/api/stock.api';
 import { formatCurrency, toCents } from '@/utils/formatters';
 import { CategoryService } from '@/services/categoryService';
+import { UnitConversion } from '@/types/units.types';
 import { UnitSelector } from '@/components/units/UnitSelector';
 import { ConversionCalculator } from '@/components/units/ConversionCalculator';
 
@@ -118,7 +119,7 @@ export default function Ventas() {
     });
   };
 
-  const updateItemUnit = (index: number, unit: any | null) => {
+  const updateItemUnit = (index: number, unit: UnitConversion | null) => {
     setCart(prev => {
       const newCart = [...prev];
       const item = newCart[index];
@@ -509,7 +510,7 @@ export default function Ventas() {
                   Agrega productos para comenzar
                 </p>
               ) : (
-                cart.map((item) => (
+                cart.map((item, index) => (
                   <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{item.name}</p>
@@ -539,7 +540,7 @@ export default function Ventas() {
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => updateQuantity(item.id, -1)}
+                          onClick={() => updateQuantity(index, -1)}
                         >
                           <span className="text-sm">-</span>
                         </Button>
@@ -551,7 +552,7 @@ export default function Ventas() {
                           onChange={(event) => {
                             const nextValue = Number(event.target.value);
                             if (!Number.isFinite(nextValue)) return;
-                            setQuantity(item.id, nextValue);
+                            setQuantity(index, nextValue);
                           }}
                           onFocus={(event) => event.target.select()}
                           className="h-7 w-16 text-center px-2"
@@ -560,7 +561,7 @@ export default function Ventas() {
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => updateQuantity(item.id, 1)}
+                          onClick={() => updateQuantity(index, 1)}
                         >
                           <span className="text-sm">+</span>
                         </Button>
@@ -568,7 +569,7 @@ export default function Ventas() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive"
-                          onClick={() => setQuantity(item.id, 0)}
+                          onClick={() => setQuantity(index, 0)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
