@@ -34,7 +34,9 @@ apiClient.interceptors.response.use(
       // Token expirado, inválido o sin permisos suficientes
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

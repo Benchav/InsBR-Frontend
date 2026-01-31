@@ -7,7 +7,8 @@ export const toCurrency = (cents: number): number => {
 export const centsToCurrency = toCurrency;
 
 // Formatear como moneda (Córdobas) para mostrar en UI
-export const formatCurrency = (cents: number): string => {
+export const formatCurrency = (cents: number | undefined | null): string => {
+  if (cents === undefined || cents === null || isNaN(cents)) return 'C$ 0.00';
   const amount = toCurrency(cents);
   return `C$ ${amount.toLocaleString('es-NI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -34,8 +35,10 @@ export const toCents = (amount: number): number => {
 export const currencyToCents = toCents;
 
 // Formatear fecha
-export const formatDate = (dateString: string): string => {
+export const formatDate = (dateString: string | undefined | null): string => {
+  if (!dateString) return '—';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('es-NI', {
     year: 'numeric',
     month: 'short',

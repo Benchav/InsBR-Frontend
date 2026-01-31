@@ -51,10 +51,12 @@ export default function Creditos() {
   const [notes, setNotes] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: credits = [], isLoading } = useQuery({
+  const { data: rawCredits, isLoading } = useQuery({
     queryKey: ['credits-cxc', branchId],
     queryFn: () => creditsApi.getAll({ type: 'CXC', branchId }),
   });
+
+  const credits = Array.isArray(rawCredits) ? rawCredits : [];
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers-active', branchId],
