@@ -259,7 +259,7 @@ export default function Inventario() {
       {/* Create/Edit Form Logic */}
       {/* Shared Dialog Content function could be better but inline is faster for now */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[900px]">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Producto</DialogTitle>
             <DialogDescription>Ingresa los detalles del insumo pastelero para el catálogo global.</DialogDescription>
@@ -276,12 +276,12 @@ export default function Inventario() {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[900px]">
           <DialogHeader>
             <DialogTitle>Editar Producto: {editingProduct?.name}</DialogTitle>
             <DialogDescription>Modifica los detalles del producto.</DialogDescription>
           </DialogHeader>
-          <ProductFormContent form={productForm} setForm={setProductForm} />
+          <ProductFormContent form={productForm} setForm={setProductForm} productId={editingProduct?.id} />
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => handleSaveProduct(true)} disabled={updateProductMutation.isPending}>
@@ -600,67 +600,161 @@ export default function Inventario() {
 }
 
 // Subcomponent for form fields to avoid duplication
+import { UnitsTable } from '@/components/inventory/UnitsTable';
+import { UnitFormModal } from '@/components/inventory/UnitFormModal';
+import { unitConversionService } from '@/services/unit-conversion.service';
+import { UnitConversion } from '@/types/units.types';
+import { useEffect } from 'react';
 
-
-function ProductFormContent({ form, setForm }: { form: any, setForm: any }) {
+function ProductFormContent({ form, setForm, productId }: { form: any, setForm: any, productId?: string }) {
   const { data: categories = [], isLoading } = useCategories();
+
+  // Units State
+  const [units, setUnits] = useState<UnitConversion[]>([]);
+  const [showUnitModal, setShowUnitModal] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<UnitConversion | undefined>();
+
+  useEffect(() => {
+    if (productId) {
+      loadUnits();
+    }
+  }, [productId]);
+
+  const loadUnits = async () => {
+    if (!productId) return;
+    try {
+      const data = await unitConversionService.getProductUnits(productId);
+      setUnits(data);
+    } catch (error) {
+      console.error('Error loading units:', error);
+    }
+  };
+
+  const handleEditUnit = (unit: UnitConversion) => {
+    setEditingUnit(unit);
+    setShowUnitModal(true);
+  };
+
+  const handleDeleteUnit = async (unitId: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta unidad?')) return;
+
+    try {
+      await unitConversionService.deleteUnit(unitId);
+      await loadUnits();
+      toast.success('Unidad eliminada');
+    } catch (error) {
+      console.error('Error deleting unit:', error);
+      toast.error('Error al eliminar la unidad');
+    }
+  };
+
+  const handleUnitSuccess = async () => {
+    await loadUnits();
+    setEditingUnit(undefined);
+    toast.success('Unidades actualizadas');
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-4 py-4">
-      <div className="space-y-2 col-span-2">
-        <Label>Nombre del Producto</Label>
-        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Harina de Trigo 0000" />
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="space-y-2 col-span-2">
+          <Label>Nombre del Producto</Label>
+          <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Harina de Trigo 0000" />
+        </div>
+        <div className="space-y-2">
+          <Label>SKU / Código</Label>
+          <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="HAR-001" />
+        </div>
+        <div className="space-y-2">
+          <Label>Categoría</Label>
+          <Select value={form.categoryId} onValueChange={(val) => setForm({ ...form, categoryId: val })}>
+            <SelectTrigger>
+              <SelectValue placeholder={isLoading ? 'Cargando...' : 'Seleccionar...'} />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Precio Costo (C$)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={form.costPrice || ''}
+            onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })}
+            placeholder="0.00"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Precio Venta (C$)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={form.retailPrice || ''}
+            onChange={(e) => setForm({ ...form, retailPrice: parseFloat(e.target.value) || 0 })}
+            placeholder="0.00"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Precio Mayorista (C$)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={form.wholesalePrice || ''}
+            onChange={(e) => setForm({ ...form, wholesalePrice: parseFloat(e.target.value) || 0 })}
+            placeholder="0.00"
+          />
+        </div>
+        <div className="space-y-2 col-span-2">
+          <Label>Descripción</Label>
+          <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ej. Harina de trigo refinada especial para repostería. Saco de 50kg." />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label>SKU / Código</Label>
-        <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="HAR-001" />
-      </div>
-      <div className="space-y-2">
-        <Label>Categoría</Label>
-        <Select value={form.categoryId} onValueChange={(val) => setForm({ ...form, categoryId: val })}>
-          <SelectTrigger>
-            <SelectValue placeholder={isLoading ? 'Cargando...' : 'Seleccionar...'} />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Precio Costo (C$)</Label>
-        <Input
-          type="number"
-          step="0.01"
-          value={form.costPrice || ''}
-          onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })}
-          placeholder="0.00"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Precio Venta (C$)</Label>
-        <Input
-          type="number"
-          step="0.01"
-          value={form.retailPrice || ''}
-          onChange={(e) => setForm({ ...form, retailPrice: parseFloat(e.target.value) || 0 })}
-          placeholder="0.00"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Precio Mayorista (C$)</Label>
-        <Input
-          type="number"
-          step="0.01"
-          value={form.wholesalePrice || ''}
-          onChange={(e) => setForm({ ...form, wholesalePrice: parseFloat(e.target.value) || 0 })}
-          placeholder="0.00"
-        />
-      </div>
-      <div className="space-y-2 col-span-2">
-        <Label>Descripción</Label>
-        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ej. Harina de trigo refinada especial para repostería. Saco de 50kg." />
-      </div>
+
+      {/* Units Section - Only Show if Product Exists (Edit Mode) */}
+      {productId && (
+        <div className="border-t pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Unidades de Medida</h3>
+              <p className="text-sm text-muted-foreground">
+                Configura las presentaciones de compra/venta. La unidad BASE se crea automáticamente.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingUnit(undefined);
+                setShowUnitModal(true);
+              }}
+              size="sm"
+            >
+              + Agregar Unidad
+            </Button>
+          </div>
+
+          <UnitsTable
+            productId={productId}
+            units={units}
+            onEdit={handleEditUnit}
+            onDelete={handleDeleteUnit}
+          />
+
+          <UnitFormModal
+            isOpen={showUnitModal}
+            onClose={() => {
+              setShowUnitModal(false);
+              setEditingUnit(undefined);
+            }}
+            productId={productId}
+            unit={editingUnit}
+            onSuccess={handleUnitSuccess}
+          />
+        </div>
+      )}
     </div>
   );
 }

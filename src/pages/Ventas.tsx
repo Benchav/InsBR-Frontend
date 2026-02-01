@@ -39,6 +39,8 @@ interface CartItem {
   unitId?: string;
   unitName?: string;
   unitSymbol?: string;
+  // Sale Type State (per item)
+  salesType: 'RETAIL' | 'WHOLESALE';
 }
 
 export default function Ventas() {
@@ -77,9 +79,8 @@ export default function Ventas() {
 
   const [discount, setDiscount] = useState(0);
 
-
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
-  const [salesType, setSalesType] = useState<'RETAIL' | 'WHOLESALE'>('RETAIL'); // New State
+  const [salesType, setSalesType] = useState<'RETAIL' | 'WHOLESALE'>('RETAIL');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerName, setCustomerName] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
@@ -89,27 +90,31 @@ export default function Ventas() {
   // Cart Logic
   const addToCart = (product: Product) => {
     setCart((prev) => {
-      // Find exact match (same product AND same unit)
-      // Since units are added *after* adding to cart in this flow, initially we look for product with no unit
-      // BUT if we want to support multiple units of same product, checking only by ID is tricky if we don't have unit yet.
-      // Strategy: Add as base product (no unit). User then selects unit.
-      // If user adds same product again, we increment the one with "no unit" or just list it again?
-      // Simplification: Check for existing item with SAME unitId (which acts as undefined initially)
+      // Find exact match needs to check unitId AND salesType
+      // Actually, if we add same product with different salesType, should they merge?
+      // User says "mixed". If I add "Sugar (Retail)" and then "Sugar (Wholesale)", they strictly have different prices usually.
+      // So they should probably be separate lines or merged if logic allows.
+      // For simplicity and correctness with "mixed" prices, let's treat them as separate if salesType differs.
 
-      const existing = prev.find((item) => item.id === product.id && item.unitId === undefined);
+      const existing = prev.find((item) =>
+        item.id === product.id &&
+        item.unitId === undefined &&
+        item.salesType === salesType // Check matching sales type
+      );
 
       if (existing) {
         return prev.map((item) =>
-          (item.id === product.id && item.unitId === undefined) ? { ...item, quantity: item.quantity + 1 } : item
+          (item === existing) ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prev, {
         id: product.id,
         name: product.name,
-        price: salesType === 'RETAIL' ? product.retailPrice : product.wholesalePrice, // Initial price based on sales type
+        price: salesType === 'RETAIL' ? product.retailPrice : product.wholesalePrice,
         quantity: 1,
         sku: product.sku,
-        unitId: undefined
+        unitId: undefined,
+        salesType: salesType // Save the snapshot
       }];
     });
   };
@@ -119,11 +124,12 @@ export default function Ventas() {
       const newCart = [...prev];
       const item = newCart[index];
 
+      // Use the ITEM'S salesType, not the global one
+      const itemSalesType = item.salesType;
+
       if (unit) {
-        // Determine price: Unit specific price OR calculated from conversion factor?
-        // The API returns retailPrice/wholesalePrice directly on the unit object if set.
-        const newPrice = salesType === 'RETAIL'
-          ? (unit.retailPrice ?? item.price) // Fallback to current if missing (should not happen if configured right) or maybe we need a fetch
+        const newPrice = itemSalesType === 'RETAIL'
+          ? (unit.retailPrice ?? item.price)
           : (unit.wholesalePrice ?? item.price);
 
         newCart[index] = {
@@ -134,7 +140,6 @@ export default function Ventas() {
           price: newPrice
         };
       } else {
-        // Revert to product base price
         const originalProduct = products.find(p => p.id === item.id);
         if (originalProduct) {
           newCart[index] = {
@@ -142,7 +147,7 @@ export default function Ventas() {
             unitId: undefined,
             unitName: undefined,
             unitSymbol: undefined,
-            price: salesType === 'RETAIL' ? originalProduct.retailPrice : originalProduct.wholesalePrice
+            price: itemSalesType === 'RETAIL' ? originalProduct.retailPrice : originalProduct.wholesalePrice
           };
         }
       }
@@ -388,7 +393,10 @@ export default function Ventas() {
                         <p className="text-xs text-muted-foreground">{product.sku}</p>
                       </div>
                       <div className="mt-3 flex items-end justify-between">
-                        <div className="font-bold text-lg text-primary">
+                        <div className="font-bold text-lg text-primary flex flex-col items-end">
+                          <span className="text-[10px] text-muted-foreground font-normal leading-none mb-1">
+                            {salesType === 'RETAIL' ? 'Precio Menudeo' : 'Precio Mayoreo'}
+                          </span>
                           {salesType === 'RETAIL'
                             ? formatCurrency(product.retailPrice)
                             : formatCurrency(product.wholesalePrice)}
@@ -431,7 +439,10 @@ export default function Ventas() {
                   <div key={`${item.id}-${index}`} className="group flex flex-col gap-2 p-3 bg-card rounded-lg border shadow-sm relative">
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0">
-                        <p className="font-medium text-sm line-clamp-1">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm line-clamp-1">{item.name}</p>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 py-0">{item.salesType === 'RETAIL' ? 'Menudeo' : 'Mayoreo'}</Badge>
+                        </div>
                         <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} c/u</p>
                       </div>
                       <p className="font-bold text-sm">
@@ -443,7 +454,7 @@ export default function Ventas() {
                       <div className="flex-1">
                         <UnitSelector
                           productId={item.id}
-                          salesType={salesType}
+                          salesType={item.salesType}
                           selectedUnitId={item.unitId}
                           onUnitChange={(unit) => updateItemUnit(index, unit)}
                         />
