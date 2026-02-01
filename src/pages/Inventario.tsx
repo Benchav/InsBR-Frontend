@@ -31,7 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
 import { ProductUnitsCell } from '@/components/inventory/ProductUnitsCell';
+import { ProductStockCell } from '@/components/inventory/ProductStockCell';
 
 export default function Inventario() {
   const { currentBranchId } = useBranchStore();
@@ -547,9 +549,7 @@ export default function Inventario() {
                           style={{ cursor: can(Permission.ADJUST_STOCK) ? 'pointer' : 'default' }}
                           title={can(Permission.ADJUST_STOCK) ? "Clic para ajustar stock Diriamba" : "Stock Diriamba"}
                         >
-                          <span className={cn('font-semibold', stockDiriamba < 10 ? 'text-destructive' : 'text-foreground')}>
-                            {stockDiriamba}
-                          </span>
+                          <ProductStockCell product={item} stock={stockDiriamba} />
                         </td>
                       )}
 
@@ -559,13 +559,13 @@ export default function Inventario() {
                           style={{ cursor: can(Permission.ADJUST_STOCK) ? 'pointer' : 'default' }}
                           title={can(Permission.ADJUST_STOCK) ? "Clic para ajustar stock Jinotepe" : "Stock Jinotepe"}
                         >
-                          <span className={cn('font-semibold', stockJinotepe < 10 ? 'text-destructive' : 'text-foreground')}>
-                            {stockJinotepe}
-                          </span>
+                          <ProductStockCell product={item} stock={stockJinotepe} />
                         </td>
                       )}
 
-                      <td className="py-4 px-4 text-center font-bold">{total}</td>
+                      <td className="py-4 px-4 text-center">
+                        <ProductStockCell product={item} stock={total} />
+                      </td>
                       <td className="py-4 px-4 text-right">
                         <ProductUnitsCell product={item} />
                       </td>
