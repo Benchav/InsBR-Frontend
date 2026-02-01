@@ -187,10 +187,20 @@ export default function Inventario() {
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
+
+    // Fallback: If categoryId is missing, try to find it by name
+    let catId = product.categoryId || '';
+    if (!catId && product.category) {
+      const found = categories.find(c => c.name === product.category);
+      if (found) {
+        catId = found.id;
+      }
+    }
+
     setProductForm({
       name: product.name,
       sku: product.sku,
-      categoryId: product.categoryId || '',
+      categoryId: catId,
       description: product.description || '',
       costPrice: toCurrency(product.costPrice),
       retailPrice: toCurrency(product.retailPrice),
@@ -665,8 +675,13 @@ function ProductFormContent({ form, setForm, productId }: { form: any, setForm: 
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Harina de Trigo 0000" />
         </div>
         <div className="space-y-2">
-          <Label>SKU / Código</Label>
-          <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="HAR-001" />
+          <Label>SKU / Código (Editable)</Label>
+          <Input
+            value={form.sku}
+            onChange={(e) => setForm({ ...form, sku: e.target.value })}
+            placeholder="HAR-001"
+            title="Puedes modificar el SKU si es necesario"
+          />
         </div>
         <div className="space-y-2">
           <Label>Categoría</Label>

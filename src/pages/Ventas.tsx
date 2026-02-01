@@ -25,9 +25,11 @@ import { stockApi, Stock } from '@/api/stock.api';
 import { formatCurrency, toCents } from '@/utils/formatters';
 import { CategoryService } from '@/services/categoryService';
 import { UnitConversion } from '@/types/units.types';
+import { productSearchService, ExpandedProduct } from '@/services/product-search.service';
 import { UnitSelector } from '@/components/units/UnitSelector';
 import { StockValidator } from '@/components/units/StockValidator';
 import { ConversionCalculator } from '@/components/units/ConversionCalculator';
+
 
 interface CartItem {
   id: string;
@@ -50,9 +52,9 @@ export default function Ventas() {
   const queryClient = useQueryClient();
 
   // Queries
-  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => productsApi.getAll({ isActive: true }),
+  const { data: expandedProducts = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['expanded-products', branchId],
+    queryFn: () => productSearchService.searchExpanded('', branchId),
   });
 
   const { data: customers = [] } = useQuery({
@@ -80,7 +82,7 @@ export default function Ventas() {
   const [discount, setDiscount] = useState(0);
 
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CREDIT'>('CASH');
-  const [salesType, setSalesType] = useState<'RETAIL' | 'WHOLESALE'>('RETAIL');
+  // Removed salesType state
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerName, setCustomerName] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
@@ -88,18 +90,13 @@ export default function Ventas() {
   const [creditNotes, setCreditNotes] = useState('');
 
   // Cart Logic
-  const addToCart = (product: Product) => {
+  const addToCart = (product: ExpandedProduct) => {
     setCart((prev) => {
-      // Find exact match needs to check unitId AND salesType
-      // Actually, if we add same product with different salesType, should they merge?
-      // User says "mixed". If I add "Sugar (Retail)" and then "Sugar (Wholesale)", they strictly have different prices usually.
-      // So they should probably be separate lines or merged if logic allows.
-      // For simplicity and correctness with "mixed" prices, let's treat them as separate if salesType differs.
-
+      // Check for exact match of ProductID AND UnitID AND SalesType
       const existing = prev.find((item) =>
-        item.id === product.id &&
-        item.unitId === undefined &&
-        item.salesType === salesType // Check matching sales type
+        item.id === product.productId &&
+        item.unitId === product.unitId &&
+        item.salesType === product.salesType
       );
 
       if (existing) {
@@ -107,16 +104,35 @@ export default function Ventas() {
           (item === existing) ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
+
       return [...prev, {
-        id: product.id,
-        name: product.name,
-        price: salesType === 'RETAIL' ? product.retailPrice : product.wholesalePrice,
+        id: product.productId,
+        name: product.displayName,
+        price: product.price,
         quantity: 1,
         sku: product.sku,
-        unitId: undefined,
-        salesType: salesType // Save the snapshot
+        unitId: product.unitId,
+        unitName: product.unitName,
+        unitSymbol: product.unitSymbol,
+        salesType: product.salesType // Use the sales type from the expanded product
       }];
     });
+  };
+
+  // Helper to find base product for fallback price
+  const getBaseProductPrice = (productId: string, type: 'RETAIL' | 'WHOLESALE') => {
+    // Find any expanded product with this ID (all share same base price usually, or we can look for base unit)
+    const p = expandedProducts.find(ep => ep.productId === productId);
+    // Logic: If p is found, its 'price' is a specific unit price.
+    // We need the BASE price.
+    // ExpandedProduct doesn't necessarily carry base price if it's a unit variant.
+    // BUT `productsApi` fetch gave us all products. We replaced that query.
+    // `expandedProducts` is all we have.
+    // However, we can store base price in ExpandedProduct or fetch it?
+    // For now, if user deselects unit, we assume it's the BASE unit.
+    // We should probably find the `id: "${productId}-base"` item in `expandedProducts`.
+    const baseItem = expandedProducts.find(ep => ep.id === `${productId}-base`);
+    return baseItem ? baseItem.price : 0;
   };
 
   const updateItemUnit = (index: number, unit: UnitConversion | null) => {
@@ -124,32 +140,32 @@ export default function Ventas() {
       const newCart = [...prev];
       const item = newCart[index];
 
-      // Use the ITEM'S salesType, not the global one
+      // Use the ITEM'S salesType
       const itemSalesType = item.salesType;
 
       if (unit) {
+        // Unit selected
         const newPrice = itemSalesType === 'RETAIL'
-          ? (unit.retailPrice ?? item.price)
-          : (unit.wholesalePrice ?? item.price);
+          ? (unit.retailPrice ?? 0)
+          : (unit.wholesalePrice ?? 0);
 
         newCart[index] = {
           ...item,
           unitId: unit.id,
           unitName: unit.unitName,
           unitSymbol: unit.unitSymbol,
-          price: newPrice
+          price: newPrice || item.price // fallback
         };
       } else {
-        const originalProduct = products.find(p => p.id === item.id);
-        if (originalProduct) {
-          newCart[index] = {
-            ...item,
-            unitId: undefined,
-            unitName: undefined,
-            unitSymbol: undefined,
-            price: itemSalesType === 'RETAIL' ? originalProduct.retailPrice : originalProduct.wholesalePrice
-          };
-        }
+        // Revert to Base
+        const basePrice = getBaseProductPrice(item.id, itemSalesType);
+        newCart[index] = {
+          ...item,
+          unitId: undefined,
+          unitName: undefined,
+          unitSymbol: undefined,
+          price: basePrice
+        };
       }
       return newCart;
     });
@@ -258,30 +274,35 @@ export default function Ventas() {
 
   // Combining Data
   const getProductStock = (productId: string, branchId: string) => {
-    const productStocks = stocks.filter(s => s.productId === productId);
-    const stockEntry = productStocks.find(s => s.branchId === branchId);
-    return stockEntry ? stockEntry.quantity : 0;
+    // If we have stocks in 'stocks' query
+    if (stocks.length > 0) {
+      const productStocks = stocks.filter(s => s.productId === productId);
+      // If branchId is ALL, sum? Or usually we only have checks for specific branch.
+      // POS usually is locked to one branch.
+      const stockEntry = productStocks.find(s => s.branchId === branchId);
+      return stockEntry ? stockEntry.quantity : 0;
+    }
+    return 0;
   };
 
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filters
+  const filteredProducts = expandedProducts.filter((p) => {
+    const matchesSearch = p.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todos' || p.category === selectedCategory;
 
-    // Branch Filter logic
-    let hasStock = true;
-    if (currentBranchId === 'BRANCH-JIN-001' || currentBranchId === 'BRANCH-DIR-001') {
-      const stock = getProductStock(p.id, currentBranchId);
-      hasStock = stock > 0;
-    }
+    // Stock Filter: Show all, or visual dimming? user code filters by stock > 0 but displayed dimmed if 0.
+    // The previous code had a complex check for branch stock.
+    // expandedProducts already has stockInUnit calculated for the branch (or 0 if not passed).
+    // Let's just trust expandedProducts logic.
 
-    return matchesSearch && matchesCategory && hasStock;
+    return matchesSearch && matchesCategory;
   });
 
   const isLoading = isLoadingProducts || isLoadingStocks || isLoadingCategories;
 
   return (
     <DashboardLayout>
-
       <div className="flex flex-col gap-6 lg:flex-row lg:h-[calc(100vh-7rem)]">
         {/* Products Section */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -293,50 +314,18 @@ export default function Ventas() {
                 Vendiendo desde: <span className="font-medium text-primary">{currentBranch.name}</span>
               </p>
             </div>
-            {/* Sales Type Toggle */}
-            <div className="flex rounded-md shadow-sm border border-input">
-              <Button
-                variant={salesType === 'RETAIL' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-r-none h-8"
-                onClick={() => setSalesType('RETAIL')}
-              >
-                Menudeo
-              </Button>
-              <div className="w-px bg-border"></div>
-              <Button
-                variant={salesType === 'WHOLESALE' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-l-none h-8"
-                onClick={() => setSalesType('WHOLESALE')}
-              >
-                Mayoreo
-              </Button>
-            </div>
+            {/* Toggle Removed */}
           </div>
 
           {/* Search and Filters Responsive */}
-          {/* Mobile: filtro apilado */}
-          <div className="flex flex-col gap-2 sm:hidden mb-4">
+          <div className="flex flex-col gap-2 mb-4">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar..."
+                placeholder="Buscar (Nombre, SKU, Unidad)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 text-sm"
-              />
-            </div>
-          </div>
-          {/* Desktop: filtro en línea */}
-          <div className="hidden sm:flex flex-col gap-3 mb-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar producto SKU o Nombre..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
               />
             </div>
           </div>
@@ -369,37 +358,35 @@ export default function Ventas() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-3">
-                {/* Modern Card Grid Layout instead of Table for better touch/visual */}
                 {filteredProducts.map((product) => {
-                  const cartItem = cart.find((item) => item.id === product.id);
-                  const stock = getProductStock(product.id, currentBranchId);
+                  const cartItem = cart.find((item) => item.id === product.productId && item.unitId === product.unitId);
+
                   return (
                     <div
                       key={product.id}
                       className={cn(
                         "group relative flex flex-col justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors cursor-pointer",
-                        cartItem && "border-primary bg-primary/5"
+                        cartItem && "border-primary bg-primary/5",
+                        product.stockInUnit <= 0 && "opacity-60 grayscale-[0.5]"
                       )}
                       onClick={() => addToCart(product)}
                     >
                       <div className="space-y-1">
                         <div className="flex justify-between items-start">
                           <Badge variant="secondary" className="text-[10px] px-1 h-5">{product.category}</Badge>
-                          <span className={cn("text-[10px] font-medium", stock < 10 ? 'text-destructive' : 'text-muted-foreground')}>
-                            Stock: {stock}
+                          <span className={cn("text-[10px] font-medium", product.stockInUnit < 10 ? 'text-destructive' : 'text-muted-foreground')}>
+                            Stock: {product.stockInUnit.toFixed(2)} {product.unitSymbol || 'u'}
                           </span>
                         </div>
-                        <h3 className="font-medium leading-none text-sm line-clamp-2 min-h-[2.5rem]">{product.name}</h3>
+                        <h3 className="font-medium leading-none text-sm line-clamp-2 min-h-[2.5rem]">{product.displayName}</h3>
                         <p className="text-xs text-muted-foreground">{product.sku}</p>
                       </div>
                       <div className="mt-3 flex items-end justify-between">
                         <div className="font-bold text-lg text-primary flex flex-col items-end">
                           <span className="text-[10px] text-muted-foreground font-normal leading-none mb-1">
-                            {salesType === 'RETAIL' ? 'Precio Menudeo' : 'Precio Mayoreo'}
+                            {product.salesType === 'RETAIL' ? 'Menudeo' : 'Mayoreo'}
                           </span>
-                          {salesType === 'RETAIL'
-                            ? formatCurrency(product.retailPrice)
-                            : formatCurrency(product.wholesalePrice)}
+                          {formatCurrency(product.price)}
                         </div>
                         <Button size="icon" variant="secondary" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <ShoppingCart className="h-4 w-4" />
