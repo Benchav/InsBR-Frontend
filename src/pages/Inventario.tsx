@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ProductUnitsCell } from '@/components/inventory/ProductUnitsCell';
 
 export default function Inventario() {
   const { currentBranchId } = useBranchStore();
@@ -565,7 +566,9 @@ export default function Inventario() {
                       )}
 
                       <td className="py-4 px-4 text-center font-bold">{total}</td>
-                      <td className="py-4 px-4 text-right font-medium">{formatCurrency(item.retailPrice)}</td>
+                      <td className="py-4 px-4 text-right">
+                        <ProductUnitsCell product={item} />
+                      </td>
                       <td className="py-4 px-4 text-center flex justify-center gap-1">
                         {can(Permission.MANAGE_PRODUCTS) && (
                           <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}>
