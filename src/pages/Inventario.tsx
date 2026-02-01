@@ -259,7 +259,7 @@ export default function Inventario() {
       {/* Create/Edit Form Logic */}
       {/* Shared Dialog Content function could be better but inline is faster for now */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[900px]">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Producto</DialogTitle>
             <DialogDescription>Ingresa los detalles del insumo pastelero para el catálogo global.</DialogDescription>
@@ -276,7 +276,7 @@ export default function Inventario() {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[900px]">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Producto: {editingProduct?.name}</DialogTitle>
             <DialogDescription>Modifica los detalles del producto.</DialogDescription>
