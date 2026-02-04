@@ -152,6 +152,15 @@ export default function Usuarios() {
     return Array.from(map.values());
   }, [branches, editingUser]);
 
+  const branchLabelMap = useMemo(() => {
+    return new Map(branchOptions.map((branch) => [branch.id, branch.name]));
+  }, [branchOptions]);
+
+  const getBranchDisplayName = (branchId?: string) => {
+    if (!branchId) return 'Sin Sucursal';
+    return branchLabelMap.get(branchId) || branchId;
+  };
+
   useEffect(() => {
     if (!branchOptions.length) return;
     if (!createForm.branchId) {
@@ -583,8 +592,8 @@ Esta acción NO se puede deshacer.`)) return;
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
-                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                      <h3 className="font-semibold text-foreground leading-tight break-words">{user.name}</h3>
+                      <p className="text-sm text-muted-foreground break-words">@{user.username}</p>
                       <span className={cn(
                         'inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium',
                         roleConfig.class
@@ -598,11 +607,11 @@ Esta acción NO se puede deshacer.`)) return;
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
                       <Badge variant="outline" className={cn(
-                        'branch-badge',
+                        'branch-badge uppercase tracking-wide text-[11px]',
                         user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
                           user.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
                       )}>
-                        {user.branchId || 'Sin Sucursal'}
+                        {getBranchDisplayName(user.branchId)}
                       </Badge>
                     </div>
                   </div>
@@ -665,8 +674,8 @@ Esta acción NO se puede deshacer.`)) return;
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
-                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                      <h3 className="font-semibold text-foreground leading-tight break-words">{user.name}</h3>
+                      <p className="text-sm text-muted-foreground break-words">@{user.username}</p>
                       <span className={cn(
                         'inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium',
                         roleConfig.class
@@ -680,11 +689,11 @@ Esta acción NO se puede deshacer.`)) return;
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
                       <Badge variant="outline" className={cn(
-                        'branch-badge',
+                        'branch-badge uppercase tracking-wide text-[11px]',
                         user.branchId === 'BRANCH-DIR-001' ? 'branch-diriamba' :
                           user.branchId === 'BRANCH-JIN-001' ? 'branch-jinotepe' : ''
                       )}>
-                        {user.branchId || 'Sin Sucursal'}
+                        {getBranchDisplayName(user.branchId)}
                       </Badge>
                     </div>
                   </div>
