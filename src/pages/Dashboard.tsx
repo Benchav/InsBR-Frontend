@@ -1,18 +1,17 @@
 import { DashboardLayout } from '@/components/layout';
 import { KPICard, BranchTabs, QuickActions } from '@/components/dashboard';
+import { Button } from '@/components/ui/button';
 import { useBranchStore } from '@/stores/branchStore';
-import { DollarSign, Package, Wallet, Users, CreditCard, AlertTriangle, ShoppingCart, Loader2 } from 'lucide-react';
+import { AlertTriangle, CreditCard, DollarSign, Loader2, Package, RefreshCcw, ShoppingCart, Users, Wallet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { cashApi } from '@/api/cash.api';
 import { stockApi } from '@/api/stock.api';
-import { customersApi } from '@/api/customers.api';
 import { creditsApi } from '@/api/credits.api';
 import { salesApi } from '@/api/sales.api';
 import { formatCurrency, formatCurrencyShort, formatDateTime } from '@/utils/formatters';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { BRANCHES } from '@/stores/branchStore';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
 import {
   ResponsiveContainer,
   BarChart,
@@ -24,37 +23,20 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
   const { currentBranchId } = useBranchStore();
-  const isAllBranches = isAdmin && currentBranchId === 'ALL';
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
-  const cashBranchFilter = isAdmin ? (branchId ? { branchId } : undefined) : undefined;
 
-  const { data: consolidatedRevenue, isLoading: isLoadingConsolidated } = useQuery({
-    queryKey: ['cash-consolidated-revenue'],
-    queryFn: () => cashApi.getConsolidatedRevenue(),
-    enabled: isAllBranches,
-    refetchInterval: 30000,
-  });
+  const {
+    data: dashboardStats,
+    isLoading: isStatsLoading,
+    error: statsError,
+    refetch: refetchDashboardStats,
+    dataUpdatedAt,
+  } = useDashboardStats(branchId);
 
-  const { data: dailyRevenue, isLoading: isLoadingRevenue } = useQuery({
-    queryKey: ['cash-daily-revenue', branchId],
-    queryFn: () => cashApi.getDailyRevenue(cashBranchFilter),
-    enabled: !isAllBranches,
-    refetchInterval: 30000,
-  });
-
-  const { data: cashBalance, isLoading: isLoadingBalance } = useQuery({
-    queryKey: ['cash-balance', branchId],
-    queryFn: () => cashApi.getBalance(cashBranchFilter),
-    enabled: !isAllBranches,
-    refetchInterval: 30000,
-  });
-
-  const { data: stockSummary, isLoading: isLoadingStockSummary } = useQuery({
-    queryKey: ['stock-summary', branchId],
-    queryFn: () => stockApi.getSummary({ branchId }),
+  const { data: pendingCredits = [], isLoading: isLoadingCredits } = useQuery({
+    queryKey: ['credits-pending', branchId],
+    queryFn: () => creditsApi.getAll({ type: 'CXC', status: 'PENDIENTE', branchId }),
     refetchInterval: 30000,
   });
 
@@ -64,38 +46,67 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: activeCustomers = [], isLoading: isLoadingCustomers } = useQuery({
-    queryKey: ['customers-active', branchId],
-    queryFn: () => customersApi.getAll({ isActive: true, branchId }),
-    refetchInterval: 30000,
-  });
-
-  const { data: pendingCredits = [], isLoading: isLoadingCredits } = useQuery({
-    queryKey: ['credits-pending', branchId],
-    queryFn: () => creditsApi.getAll({ type: 'CXC', status: 'PENDIENTE', branchId }),
-    refetchInterval: 30000,
-  });
-
   const { data: sales = [], isLoading: isLoadingSales } = useQuery({
     queryKey: ['sales', branchId],
     queryFn: () => salesApi.getAll(branchId ? { branchId } : undefined),
     refetchInterval: 30000,
   });
 
-  const revenueValue = isAllBranches
-    ? consolidatedRevenue?.totals.income ?? 0
-    : dailyRevenue?.income ?? 0;
-
-  const balanceValue = isAllBranches
-    ? consolidatedRevenue?.totals.netBalance ?? 0
-    : cashBalance?.netBalance ?? 0;
-
-  const consolidatedBranches = consolidatedRevenue?.branches ?? [];
-  const consolidatedTotals = consolidatedRevenue?.totals;
-
   const pendingCreditsAmount = useMemo(() => {
     return pendingCredits.reduce((sum, credit) => sum + credit.balanceAmount, 0);
   }, [pendingCredits]);
+
+  const lastUpdatedLabel = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString('es-NI', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+
+  const statsCards = dashboardStats
+    ? [
+        {
+          title: 'Ventas del Día',
+          value: formatCurrency(dashboardStats.salesTotal),
+          icon: <DollarSign className="h-6 w-6 text-primary" />, 
+          iconBgClass: 'bg-primary/10',
+        },
+        {
+          title: 'Balance de Caja',
+          value: formatCurrency(dashboardStats.cashBalance),
+          icon: <Wallet className="h-6 w-6 text-success" />, 
+          iconBgClass: 'bg-success/10',
+        },
+        {
+          title: 'Inventario Total',
+          value: `${dashboardStats.totalStock.toLocaleString('es-NI')} unidades`,
+          icon: <Package className="h-6 w-6 text-blue-500" />, 
+          iconBgClass: 'bg-blue-500/10',
+        },
+        {
+          title: 'Clientes Activos',
+          value: dashboardStats.activeCustomers.toString(),
+          icon: <Users className="h-6 w-6 text-purple-500" />, 
+          iconBgClass: 'bg-purple-500/10',
+        },
+        {
+          title: 'Créditos Pendientes',
+          value: formatCurrency(pendingCreditsAmount),
+          icon: <CreditCard className="h-6 w-6 text-warning" />, 
+          iconBgClass: 'bg-warning/10',
+        },
+        {
+          title: 'Alertas de Stock',
+          value: dashboardStats.stockAlerts.toString(),
+          icon: (
+            <AlertTriangle
+              className={`h-6 w-6 ${dashboardStats.stockAlerts > 0 ? 'text-destructive' : 'text-success'}`}
+            />
+          ),
+          iconBgClass: dashboardStats.stockAlerts > 0 ? 'bg-destructive/10' : 'bg-success/10',
+        },
+      ]
+    : [];
 
   const salesForBranch = useMemo(() => {
     return branchId ? sales.filter((sale) => sale.branchId === branchId) : sales;
@@ -165,110 +176,101 @@ export default function Dashboard() {
         <BranchTabs />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 mb-6 lg:grid-cols-3">
-        <KPICard
-          title="Ventas del Día"
-          value={(isAllBranches ? isLoadingConsolidated : isLoadingRevenue) ? "..." : formatCurrency(revenueValue)}
-          icon={(isAllBranches ? isLoadingConsolidated : isLoadingRevenue) ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <DollarSign className="h-6 w-6 text-primary" />}
-          iconBgClass="bg-primary/10"
-        />
-        <KPICard
-          title="Balance de Caja"
-          value={(isAllBranches ? isLoadingConsolidated : isLoadingBalance) ? "..." : formatCurrency(balanceValue)}
-          icon={(isAllBranches ? isLoadingConsolidated : isLoadingBalance) ? <Loader2 className="h-6 w-6 animate-spin text-success" /> : <Wallet className="h-6 w-6 text-success" />}
-          iconBgClass="bg-success/10"
-        />
-        <KPICard
-          title="Inventario Total"
-          value={isLoadingStockSummary ? "..." : `${stockSummary?.totalUnits ?? 0} unidades`}
-          icon={isLoadingStockSummary ? <Loader2 className="h-6 w-6 animate-spin text-blue-500" /> : <Package className="h-6 w-6 text-blue-500" />}
-          iconBgClass="bg-blue-500/10"
-        />
-        <KPICard
-          title="Clientes Activos"
-          value={isLoadingCustomers ? "..." : activeCustomers.length.toString()}
-          icon={isLoadingCustomers ? <Loader2 className="h-6 w-6 animate-spin text-purple-500" /> : <Users className="h-6 w-6 text-purple-500" />}
-          iconBgClass="bg-purple-500/10"
-        />
-        <KPICard
-          title="Créditos Pendientes"
-          value={isLoadingCredits ? "..." : formatCurrency(pendingCreditsAmount)}
-          icon={isLoadingCredits ? <Loader2 className="h-6 w-6 animate-spin text-warning" /> : <CreditCard className="h-6 w-6 text-warning" />}
-          iconBgClass="bg-warning/10"
-        />
-        <KPICard
-          title="Alertas de Stock"
-          value={isLoadingStockAlerts ? "..." : stockAlerts.length.toString()}
-          icon={isLoadingStockAlerts ? <Loader2 className="h-6 w-6 animate-spin text-destructive" /> : <AlertTriangle className="h-6 w-6 text-destructive" />}
-          iconBgClass="bg-destructive/10"
-        />
-      </div>
-
-      {isAllBranches && (
-        <div className="kpi-card animate-fade-in mb-6">
-          <div className="flex items-center justify-between mb-4">
+      <div className="grid gap-6 mb-6">
+        <div className="kpi-card animate-fade-in">
+          <div className="flex items-start justify-between gap-3 mb-4">
             <div>
-              <h3 className="text-lg font-semibold text-foreground">Consolidado por Sucursal</h3>
-              <p className="text-sm text-muted-foreground">Totales del día</p>
+              <h3 className="text-lg font-semibold text-foreground">Estadísticas consolidadas</h3>
+              {lastUpdatedLabel && (
+                <p className="text-xs text-muted-foreground">Última actualización: {lastUpdatedLabel}</p>
+              )}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => refetchDashboardStats()}
+              disabled={isStatsLoading}
+            >
+              <RefreshCcw className="h-4 w-4" />
+              Actualizar
+            </Button>
           </div>
-          {isLoadingConsolidated ? (
+          {isStatsLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+              <Loader2 className="h-4 w-4 animate-spin" /> Cargando estadísticas...
             </div>
-          ) : consolidatedBranches.length ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-lg border border-border p-4">
-                  <p className="text-xs text-muted-foreground">Ingresos</p>
-                  <p className="text-lg font-semibold text-foreground">{formatCurrency(consolidatedTotals?.income ?? 0)}</p>
-                </div>
-                <div className="rounded-lg border border-border p-4">
-                  <p className="text-xs text-muted-foreground">Egresos</p>
-                  <p className="text-lg font-semibold text-foreground">{formatCurrency(consolidatedTotals?.expenses ?? 0)}</p>
-                </div>
-                <div className="rounded-lg border border-border p-4">
-                  <p className="text-xs text-muted-foreground">Balance</p>
-                  <p className="text-lg font-semibold text-foreground">{formatCurrency(consolidatedTotals?.netBalance ?? 0)}</p>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="table-header text-left py-2 px-2">Sucursal</th>
-                      <th className="table-header text-right py-2 px-2">Ingresos</th>
-                      <th className="table-header text-right py-2 px-2">Egresos</th>
-                      <th className="table-header text-right py-2 px-2">Balance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {consolidatedBranches.map((branch, idx) => (
-                      <tr key={branch.branchId || idx} className="border-b border-border/50">
-                        <td className="py-2 px-2 text-sm text-foreground">
-                          {branch.branchName}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-foreground">
-                          {formatCurrency(branch.income)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-foreground">
-                          {formatCurrency(branch.expenses)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-foreground">
-                          {formatCurrency(branch.netBalance)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          ) : statsError ? (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Hubo un error al cargar las estadísticas. Intenta de nuevo.</span>
             </div>
+          ) : !dashboardStats ? (
+            <p className="text-sm text-muted-foreground">No hay datos disponibles.</p>
           ) : (
-            <p className="text-sm text-muted-foreground">Sin datos consolidados.</p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {statsCards.map((card) => (
+                <KPICard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
+                  icon={card.icon}
+                  iconBgClass={card.iconBgClass}
+                />
+              ))}
+            </div>
           )}
         </div>
-      )}
+        {dashboardStats?.branches && dashboardStats.branches.length > 0 && (
+          <div className="kpi-card animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Consolidado por Sucursal</h3>
+                <p className="text-sm text-muted-foreground">Totales del día</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {dashboardStats.branches.map((branch) => (
+                <div key={branch.id} className="rounded-xl border border-border/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground truncate">{branch.name}</p>
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {branch.code}
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between">
+                      <span>Ventas</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(branch.salesTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Balance caja</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(branch.cashBalance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Inventario</span>
+                      <span className="font-semibold text-foreground">
+                        {branch.totalStock?.toLocaleString('es-NI') ?? 0} u
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Alertas</span>
+                      <span
+                        className={cn(
+                          'text-sm font-semibold',
+                          branch.stockAlerts > 0 ? 'text-destructive' : 'text-success'
+                        )}
+                      >
+                        {branch.stockAlerts}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
