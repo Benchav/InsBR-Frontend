@@ -78,9 +78,11 @@ const SidebarContent = ({
 export function AppSidebar({
   mobileOpen,
   onMobileOpenChange,
+  desktopVisible,
 }: {
   mobileOpen: boolean;
   onMobileOpenChange: (open: boolean) => void;
+  desktopVisible: boolean;
 }) {
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
@@ -88,7 +90,12 @@ export function AppSidebar({
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-border bg-sidebar md:block">
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 hidden h-screen border-r border-border bg-sidebar',
+          desktopVisible ? 'md:block w-64' : 'md:hidden'
+        )}
+      >
         <SidebarContent
           visibleItems={visibleItems}
           user={user}

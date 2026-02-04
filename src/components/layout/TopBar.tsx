@@ -1,5 +1,5 @@
 
-import { Bell, Search, MapPin, Menu } from 'lucide-react';
+import { Bell, Search, MapPin, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { creditsApi } from '@/api/credits.api';
 import { formatDate } from '@/utils/formatters';
@@ -21,7 +21,15 @@ import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 
 
-export function TopBar({ onOpenSidebar }: { onOpenSidebar?: () => void }) {
+export function TopBar({
+  onOpenSidebar,
+  isDesktopSidebarVisible,
+  onToggleDesktopSidebar,
+}: {
+  onOpenSidebar?: () => void;
+  isDesktopSidebarVisible?: boolean;
+  onToggleDesktopSidebar?: () => void;
+}) {
   const { currentBranchId, setCurrentBranch, getCurrentBranch } = useBranchStore();
   const currentBranch = getCurrentBranch();
   const { user } = useAuth();
@@ -90,8 +98,33 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar?: () => void }) {
           size="icon"
           className="md:hidden"
           onClick={onOpenSidebar}
+          aria-label="Abrir menú"
         >
           <Menu className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="outline"
+          size="default"
+          className="hidden md:flex items-center gap-1 rounded-full border-border bg-muted/60 text-foreground shadow-sm transition hover:bg-muted/80"
+          onClick={onToggleDesktopSidebar}
+          aria-label={isDesktopSidebarVisible ? 'Ocultar menú' : 'Mostrar menú'}
+          title={isDesktopSidebarVisible ? 'Ocultar menú' : 'Mostrar menú'}
+        >
+          {isDesktopSidebarVisible ? (
+            <>
+              <ChevronLeft className="h-5 w-5 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                ocultar
+              </span>
+            </>
+          ) : (
+            <>
+              <ChevronRight className="h-5 w-5 text-primary" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                mostrar
+              </span>
+            </>
+          )}
         </Button>
         <div className="relative flex-1 max-w-md hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
