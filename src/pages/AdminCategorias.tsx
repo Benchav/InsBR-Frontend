@@ -155,7 +155,7 @@ export default function AdminCategorias() {
               <Table className="min-w-[600px] text-xs sm:text-sm">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="whitespace-nowrap">Nombre</TableHead>
+                    <TableHead className="whitespace-nowrap min-w-[180px]">Nombre</TableHead>
                     <TableHead className="whitespace-nowrap">Descripción</TableHead>
                     <TableHead className="whitespace-nowrap">Estado</TableHead>
                     <TableHead className="whitespace-nowrap">Acciones</TableHead>
@@ -169,7 +169,7 @@ export default function AdminCategorias() {
                   ) : (
                     filteredCategories.map(cat => (
                       <TableRow key={cat.id}>
-                        <TableCell className="max-w-[120px] truncate">{cat.name}</TableCell>
+                        <TableCell className="min-w-[200px] whitespace-normal font-semibold">{cat.name}</TableCell>
                         <TableCell className="whitespace-normal">{cat.description || '—'}</TableCell>
                         <TableCell>{cat.isActive ? 'Activo' : 'Inactivo'}</TableCell>
                         <TableCell className="flex flex-col gap-2 sm:flex-row sm:gap-2">
