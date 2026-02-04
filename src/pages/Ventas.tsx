@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, ShoppingCart, User, Trash2, Percent, Receipt, DollarSign, CreditCard, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   Select,
@@ -73,6 +73,25 @@ export default function Ventas() {
   });
 
   const categories = ['Todos', ...categoriesData.filter(c => c.isActive).map(c => c.name)];
+
+  const quickSkuProducts = useMemo(() => {
+    const seen = new Set<string>();
+    const stockMap = new Map<string, number>();
+    stocks.forEach((entry) => {
+      if (entry.quantity > 0) {
+        stockMap.set(entry.productId, entry.quantity);
+      }
+    });
+
+    return expandedProducts
+      .filter((prod) => prod.sku && prod.sku.trim() && (stockMap.get(prod.productId) ?? 0) > 0)
+      .filter((prod) => {
+        if (seen.has(prod.sku!)) return false;
+        seen.add(prod.sku!);
+        return true;
+      })
+      .slice(0, 12);
+  }, [expandedProducts, stocks]);
 
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -328,6 +347,26 @@ export default function Ventas() {
                 className="pl-10 text-sm"
               />
             </div>
+          </div>
+
+          {/* Quick SKU buttons */}
+          <div className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">SKUs rápidos</div>
+          <div className="flex flex-wrap gap-2 mb-4 pb-2">
+            {quickSkuProducts.map((skuProduct) => (
+              <Button
+                key={skuProduct.id}
+                variant={searchTerm === skuProduct.sku ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setSearchTerm(skuProduct.sku ?? '');
+                  setSelectedCategory('Todos');
+                }}
+                className="whitespace-nowrap"
+                title={skuProduct.displayName}
+              >
+                {skuProduct.sku}
+              </Button>
+            ))}
           </div>
 
           {/* Category Tabs */}
