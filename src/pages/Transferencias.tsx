@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { transferService } from '@/services/transferService';
 import { productsApi } from '@/api/products.api';
 import { toast } from 'sonner';
-import { CreateTransferDto, TransferStatus } from '@/types/transfer';
+import { CreateTransferDto, TransferStatus, Transfer } from '@/types/transfer';
 import { TransferActions } from '@/components/transfers/TransferActions';
 import { TransferStatusBadge } from '@/components/transfers/TransferStatusBadge';
 import {
@@ -31,12 +31,21 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
+const BRANCH_NAMES: Record<string, string> = {
+  'BRANCH-DIR-001': 'Diriamba',
+  'BRANCH-JIN-001': 'Jinotepe',
+};
+
+const getBranchLabel = (id?: string) => id ? BRANCH_NAMES[id] ?? id : 'Sin registro';
+
 export default function Transferencias() {
   const { currentBranchId } = useBranchStore();
   const branchId = currentBranchId === 'ALL' ? undefined : currentBranchId;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [detailTransfer, setDetailTransfer] = useState<Transfer | null>(null);
   const queryClient = useQueryClient();
 
   // Create Transfer State
@@ -96,12 +105,13 @@ export default function Transferencias() {
   const getProductName = (id: string) => products.find(p => p.id === id)?.name || id;
 
   const filteredTransfers = transfers.filter((t) => {
-    const matchesSearch = t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.fromBranchId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.toBranchId.toLowerCase().includes(searchTerm.toLowerCase());
+    const lowerSearch = searchTerm.toLowerCase();
+    const matchesId = t.id.toLowerCase().includes(lowerSearch);
+    const matchesBranch = getBranchLabel(t.fromBranchId).toLowerCase().includes(lowerSearch) ||
+      getBranchLabel(t.toBranchId).toLowerCase().includes(lowerSearch);
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    return (matchesId || matchesBranch) && matchesStatus;
   });
 
   const pendingCount = transfers.filter(t => t.status === 'PENDING').length;
@@ -112,6 +122,21 @@ export default function Transferencias() {
     // Invalidate all transfer queries to ensure fresh data
     queryClient.invalidateQueries({ queryKey: ['transfers'] });
   };
+
+  const openTransferDetails = (transfer: Transfer) => {
+    setDetailTransfer(transfer);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleDetailDialogChange = (isOpen: boolean) => {
+    setIsDetailDialogOpen(isOpen);
+    if (!isOpen) {
+      setDetailTransfer(null);
+    }
+  };
+
+  const detailItemCount = detailTransfer?.items.length ?? 0;
+  const detailUnitCount = detailTransfer?.items.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
 
   return (
     <DashboardLayout>
@@ -236,6 +261,79 @@ export default function Transferencias() {
         </Dialog>
       </div>
 
+      <Dialog open={isDetailDialogOpen} onOpenChange={handleDetailDialogChange}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Detalles de Transferencia</DialogTitle>
+            <DialogDescription>
+              Revise el movimiento entre sucursales, quién lo creó y qué productos viajan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs uppercase text-muted-foreground">Transferencia</p>
+                <p className="text-lg font-semibold">{detailTransfer?.id ?? 'N/A'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {detailTransfer?.createdAt ? new Date(detailTransfer.createdAt).toLocaleString() : 'Fecha no registrada'}
+                </p>
+              </div>
+              {detailTransfer && <TransferStatusBadge status={detailTransfer.status} />}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded border border-border bg-muted/20 p-3 space-y-1">
+                <p className="text-xs uppercase text-muted-foreground">Origen</p>
+                <p className="text-base font-medium" title={detailTransfer?.fromBranchId}>{getBranchLabel(detailTransfer?.fromBranchId)}</p>
+                {detailTransfer?.type && (
+                  <p className="text-xs text-muted-foreground">
+                    Tipo: {detailTransfer.type === 'SEND' ? 'Envío' : 'Solicitud'}
+                  </p>
+                )}
+              </div>
+              <div className="rounded border border-border bg-muted/20 p-3 space-y-1">
+                <p className="text-xs uppercase text-muted-foreground">Destino</p>
+                <p className="text-base font-medium" title={detailTransfer?.toBranchId}>{getBranchLabel(detailTransfer?.toBranchId)}</p>
+                {detailTransfer?.notes && (
+                  <p className="text-xs text-muted-foreground">Notas: {detailTransfer.notes}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Productos</span>
+                <span className="text-xs text-muted-foreground">
+                  {detailItemCount} renglones · {detailUnitCount} unidades
+                </span>
+              </div>
+              <div className="max-h-52 overflow-y-auto rounded border bg-background text-sm shadow-inner shadow-black/5 divide-y">
+                {detailTransfer?.items.length ? (
+                  detailTransfer.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between px-3 py-2">
+                      <div className="space-y-0.5">
+                        <p className="font-medium">{getProductName(item.productId) || item.productName}</p>
+                        <p className="text-xs text-muted-foreground break-words">{item.productId}</p>
+                      </div>
+                      <p className="font-semibold">{item.quantity} unid.</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-3 py-5 text-center text-muted-foreground">
+                    Ningún producto registrado en esta transferencia todavía.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button variant="outline" onClick={() => handleDetailDialogChange(false)}>
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <KPICard
@@ -303,10 +401,10 @@ export default function Transferencias() {
                   <span className="font-mono font-medium text-sm">{t.id}</span>
                   <TransferStatusBadge status={t.status} />
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Badge variant="outline">{t.fromBranchId}</Badge>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Badge variant="outline" title={t.fromBranchId}>{getBranchLabel(t.fromBranchId)}</Badge>
                   <ArrowRight className="h-3 w-3" />
-                  <Badge variant="outline">{t.toBranchId}</Badge>
+                    <Badge variant="outline" title={t.toBranchId}>{getBranchLabel(t.toBranchId)}</Badge>
                 </div>
                 <div className="text-sm">
                   <p className="font-medium mb-1">{t.items.length} Productos:</p>
@@ -317,8 +415,16 @@ export default function Transferencias() {
                     {t.items.length > 2 && <li>...</li>}
                   </ul>
                 </div>
-                <div className="pt-2 border-t mt-1">
+                <div className="pt-2 border-t mt-1 flex flex-col gap-2">
                   <TransferActions transfer={t} userBranchId={currentBranchId || ''} onAction={handleRefresh} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => openTransferDetails(t)}
+                  >
+                    Ver detalles
+                  </Button>
                 </div>
               </div>
             ))
@@ -351,9 +457,9 @@ export default function Transferencias() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{t.fromBranchId}</Badge>
+                        <Badge variant="outline" className="text-xs" title={t.fromBranchId}>{getBranchLabel(t.fromBranchId)}</Badge>
                         <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <Badge variant="outline" className="text-xs">{t.toBranchId}</Badge>
+                        <Badge variant="outline" className="text-xs" title={t.toBranchId}>{getBranchLabel(t.toBranchId)}</Badge>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -365,7 +471,17 @@ export default function Transferencias() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <TransferActions transfer={t} userBranchId={currentBranchId || ''} onAction={handleRefresh} />
+                      <div className="flex flex-col gap-2">
+                        <TransferActions transfer={t} userBranchId={currentBranchId || ''} onAction={handleRefresh} />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => openTransferDetails(t)}
+                        >
+                          Ver detalles
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
