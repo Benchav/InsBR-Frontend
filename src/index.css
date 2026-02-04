@@ -131,15 +131,27 @@
 
 @layer components {
   .kpi-card {
-    @apply bg-card rounded-xl p-5 border border-border shadow-sm hover:shadow-md transition-shadow;
+    @apply bg-card rounded-lg p-3 border border-border shadow-sm hover:shadow-md transition-shadow;
   }
   
   .kpi-value {
-    @apply text-2xl font-bold text-foreground;
+    @apply font-bold text-foreground leading-tight;
+    font-size: clamp(1.25rem, 2vw + 0.5rem, 1.875rem);
   }
-  
+
   .kpi-label {
-    @apply text-sm text-muted-foreground font-medium;
+    @apply text-muted-foreground font-medium;
+    font-size: clamp(0.65rem, 0.6vw + 0.4rem, 0.95rem);
+  }
+
+  .report-metric-label {
+    @apply text-muted-foreground font-medium;
+    font-size: clamp(0.65rem, 0.6vw + 0.4rem, 0.95rem);
+  }
+
+  .report-metric-value {
+    @apply font-bold text-foreground leading-tight;
+    font-size: clamp(1.2rem, 2vw + 0.5rem, 2rem);
   }
   
   .kpi-trend-up {
@@ -148,6 +160,14 @@
   
   .kpi-trend-down {
     @apply text-destructive text-xs font-medium flex items-center gap-1;
+  }
+
+  .transfer-card-mobile {
+    @apply bg-card border border-border/80 rounded-2xl p-3 space-y-2 text-sm shadow-sm;
+  }
+
+  .transfer-card-mobile .flex {
+    gap: 0.35rem;
   }
   
   .sidebar-item {

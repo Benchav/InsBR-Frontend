@@ -365,75 +365,52 @@ export default function Reportes() {
         </div>
       </div>
 
-      {/* KPIs Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="kpi-card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted-foreground">Ingresos Totales</p>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-primary" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
-          <div className="flex items-center gap-1 mt-1">
-            {revenueTrend >= 0 ? (
-              <ArrowUpRight className="h-4 w-4 text-success" />
-            ) : (
-              <ArrowDownRight className="h-4 w-4 text-destructive" />
-            )}
-            <span className={cn(
-              'text-sm font-medium',
-              revenueTrend >= 0 ? 'text-success' : 'text-destructive'
-            )}>
-              {revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%
-            </span>
-            <span className="text-sm text-muted-foreground">vs período anterior</span>
+      {/* Quick Reports */}
+      <div className="kpi-card mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-foreground">Reportes Rápidos</h3>
+            <p className="text-sm text-muted-foreground">Genera reportes predefinidos</p>
           </div>
         </div>
-
-        <div className="kpi-card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted-foreground">Ventas Realizadas</p>
-            <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <ShoppingCart className="h-5 w-5 text-success" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{periodSales.length.toLocaleString()}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <ArrowUpRight className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">{revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%</span>
-            <span className="text-sm text-muted-foreground">vs período anterior</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted-foreground">Ticket Promedio</p>
-            <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-warning" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{formatCurrency(averageTicket)}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <ArrowUpRight className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">{revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%</span>
-            <span className="text-sm text-muted-foreground">vs período anterior</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted-foreground">Clientes Activos</p>
-            <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-info" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold">{customers.length.toLocaleString()}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <ArrowUpRight className="h-4 w-4 text-success" />
-            <span className="text-sm font-medium text-success">{revenueTrend >= 0 ? '+' : ''}{revenueTrend.toFixed(1)}%</span>
-            <span className="text-sm text-muted-foreground">vs período anterior</span>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {reportTypes.map((report) => {
+            const Icon = report.icon;
+            const isAllowed = !!user?.role && report.roles.includes(user.role);
+            const isDownloading = downloadingReportId === report.id;
+            return (
+              <button
+                key={report.id}
+                className={cn(
+                  'flex flex-col gap-1.5 p-3 rounded-lg border border-border transition-all text-left group',
+                  isAllowed ? 'hover:border-primary hover:bg-primary/5' : 'opacity-60 cursor-not-allowed'
+                )}
+                onClick={() => handleDownloadReport(report.id)}
+                disabled={!isAllowed || isDownloading}
+              >
+                <div className="flex items-start gap-2 w-full">
+                  <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center transition-colors', reportIconClasses[report.color])}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm truncate">{report.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{report.description}</p>
+                  </div>
+                  <FileText className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="mt-2">
+                  <span
+                    className={cn(
+                      'inline-flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors',
+                      isAllowed ? reportColorClasses[report.color] : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {isDownloading ? 'Generando...' : 'Descargar Excel'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -550,97 +527,47 @@ export default function Reportes() {
         </div>
       </div>
 
-      {/* Top Products & Quick Reports */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Products */}
-        <div className="kpi-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-foreground">Productos Más Vendidos</h3>
-              <p className="text-sm text-muted-foreground">Top 5 del mes</p>
-            </div>
-            <Button variant="ghost" size="sm">Ver todos</Button>
+      {/* Top Products */}
+      <div className="kpi-card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-foreground">Productos Más Vendidos</h3>
+            <p className="text-sm text-muted-foreground">Top 5 del mes</p>
           </div>
-          <div className="space-y-4">
-            {topProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay ventas para mostrar.</p>
-            ) : (
-              topProducts.map((product, idx) => (
-                <div key={product.name} className="flex items-center gap-4">
-                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.sales.toLocaleString()} unidades</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{formatCurrencyShort(product.revenue)}</p>
-                    <div className="flex items-center justify-end gap-1">
-                      {product.trend >= 0 ? (
-                        <TrendingUp className="h-3 w-3 text-success" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-destructive" />
-                      )}
-                      <span className={cn(
-                        'text-xs font-medium',
-                        product.trend >= 0 ? 'text-success' : 'text-destructive'
-                      )}>
-                        {product.trend >= 0 ? '+' : ''}{product.trend}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <Button variant="ghost" size="sm">Ver todos</Button>
         </div>
-
-        {/* Quick Reports */}
-        <div className="kpi-card">
-          <div className="mb-4">
-            <h3 className="font-semibold text-foreground">Reportes Rápidos</h3>
-            <p className="text-sm text-muted-foreground">Genera reportes predefinidos</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {reportTypes.map((report) => {
-              const Icon = report.icon;
-              const isAllowed = !!user?.role && report.roles.includes(user.role);
-              const isDownloading = downloadingReportId === report.id;
-              return (
-                <button
-                  key={report.id}
-                  className={cn(
-                    'flex flex-col gap-3 p-4 rounded-xl border border-border transition-all text-left group',
-                    isAllowed ? 'hover:border-primary hover:bg-primary/5' : 'opacity-60 cursor-not-allowed'
-                  )}
-                  onClick={() => handleDownloadReport(report.id)}
-                  disabled={!isAllowed || isDownloading}
-                >
-                  <div className="flex items-start gap-3 w-full">
-                    <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center transition-colors', reportIconClasses[report.color])}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground">{report.name}</p>
-                      <p className="text-xs text-muted-foreground">{report.description}</p>
-                    </div>
-                    <FileText className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <div className="mt-2">
-                    <span
-                      className={cn(
-                        'inline-flex items-center justify-center rounded-md px-3 py-2 text-xs font-semibold transition-colors',
-                        isAllowed ? reportColorClasses[report.color] : 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {isDownloading ? 'Generando...' : 'Descargar Excel'}
+        <div className="space-y-4">
+          {topProducts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay ventas para mostrar.</p>
+          ) : (
+            topProducts.map((product, idx) => (
+              <div key={product.name} className="flex items-center gap-4">
+                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                  {idx + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground truncate">{product.name}</p>
+                  <p className="text-sm text-muted-foreground">{product.sales.toLocaleString()} unidades</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">{formatCurrencyShort(product.revenue)}</p>
+                  <div className="flex items-center justify-end gap-1">
+                    {product.trend >= 0 ? (
+                      <TrendingUp className="h-3 w-3 text-success" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 text-destructive" />
+                    )}
+                    <span className={cn(
+                      'text-xs font-medium',
+                      product.trend >= 0 ? 'text-success' : 'text-destructive'
+                    )}>
+                      {product.trend >= 0 ? '+' : ''}{product.trend}%
                     </span>
                   </div>
-                </button>
-              );
-            })}
-          </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </DashboardLayout>

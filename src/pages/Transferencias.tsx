@@ -396,7 +396,7 @@ export default function Transferencias() {
             <div className="p-8 text-center text-muted-foreground">No hay transferencias encontradas.</div>
           ) : (
             filteredTransfers.map((t) => (
-              <div key={t.id} className="p-4 flex flex-col gap-3">
+              <div key={t.id} className="transfer-card-mobile">
                 <div className="flex justify-between items-start">
                   <span className="font-mono font-medium text-sm">{t.id}</span>
                   <TransferStatusBadge status={t.status} />

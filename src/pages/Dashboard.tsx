@@ -166,7 +166,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6 lg:grid-cols-3">
         <KPICard
           title="Ventas del Día"
           value={(isAllBranches ? isLoadingConsolidated : isLoadingRevenue) ? "..." : formatCurrency(revenueValue)}

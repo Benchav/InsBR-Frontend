@@ -33,7 +33,7 @@ export function KPICard({ title, value, trend, trendLabel, icon, iconBgClass }: 
           )}
         </div>
         {icon && (
-          <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl', iconBgClass || 'bg-primary/10')}>
+          <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', iconBgClass || 'bg-primary/10')}>
             {icon}
           </div>
         )}
