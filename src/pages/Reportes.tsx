@@ -3,12 +3,10 @@ import { useBranchStore } from '@/stores/branchStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { 
-  Download, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  ShoppingCart, 
+import {
+  Download,
+  DollarSign,
+  ShoppingCart,
   Package,
   Users,
   Calendar,
@@ -250,36 +248,6 @@ export default function Reportes() {
       }));
   }, [products, periodSales]);
 
-  const topProducts = useMemo(() => {
-    const buildTotals = (salesList: typeof sales) => {
-      const totals = new Map<string, { name: string; sales: number; revenue: number }>();
-      salesList.forEach((sale) => {
-        sale.items.forEach((item) => {
-          const name = item.productName || item.productId;
-          const current = totals.get(name) || { name, sales: 0, revenue: 0 };
-          const itemTotal = item.subtotal ?? item.unitPrice * item.quantity;
-          current.sales += item.quantity;
-          current.revenue += itemTotal;
-          totals.set(name, current);
-        });
-      });
-      return totals;
-    };
-
-    const currentTotals = buildTotals(periodSales);
-    const previousTotals = buildTotals(previousPeriodSales);
-
-    return Array.from(currentTotals.values())
-      .map((item) => {
-        const prev = previousTotals.get(item.name);
-        const prevRevenue = prev?.revenue ?? 0;
-        const trend = prevRevenue === 0 ? (item.revenue > 0 ? 100 : 0) : ((item.revenue - prevRevenue) / prevRevenue) * 100;
-        return { ...item, trend: Math.round(trend) };
-      })
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [periodSales, previousPeriodSales]);
-
   const toDateInput = (date: Date) => date.toISOString().split('T')[0];
 
   const handleDownloadReport = async (reportId: string) => {
@@ -345,9 +313,9 @@ export default function Reportes() {
             Análisis y métricas de {currentBranchId === 'ALL' ? 'todas las sucursales' : currentBranch.name}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[220px] text-sm">
               <Calendar className="mr-2 h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
@@ -358,10 +326,6 @@ export default function Reportes() {
               <SelectItem value="year">Este Año</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Exportar PDF
-          </Button>
         </div>
       </div>
 
@@ -527,49 +491,6 @@ export default function Reportes() {
         </div>
       </div>
 
-      {/* Top Products */}
-      <div className="kpi-card mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-semibold text-foreground">Productos Más Vendidos</h3>
-            <p className="text-sm text-muted-foreground">Top 5 del mes</p>
-          </div>
-          <Button variant="ghost" size="sm">Ver todos</Button>
-        </div>
-        <div className="space-y-4">
-          {topProducts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay ventas para mostrar.</p>
-          ) : (
-            topProducts.map((product, idx) => (
-              <div key={product.name} className="flex items-center gap-4">
-                <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                  {idx + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{product.name}</p>
-                  <p className="text-sm text-muted-foreground">{product.sales.toLocaleString()} unidades</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{formatCurrencyShort(product.revenue)}</p>
-                  <div className="flex items-center justify-end gap-1">
-                    {product.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-success" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-destructive" />
-                    )}
-                    <span className={cn(
-                      'text-xs font-medium',
-                      product.trend >= 0 ? 'text-success' : 'text-destructive'
-                    )}>
-                      {product.trend >= 0 ? '+' : ''}{product.trend}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </DashboardLayout>
   );
 }
