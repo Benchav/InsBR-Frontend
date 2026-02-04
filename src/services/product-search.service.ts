@@ -60,7 +60,10 @@ export const productSearchService = {
             // For now, we follow the plan. 
 
             await Promise.all(products.map(async (product) => {
-                const stockItem = stocks.find(s => s.id === product.id);
+                const branchStocks = branchId
+                    ? stocks.filter(s => s.branchId === branchId)
+                    : stocks;
+                const stockItem = branchStocks.find(s => s.productId === product.id);
                 const baseStock = stockItem ? stockItem.quantity : 0;
 
                 try {
